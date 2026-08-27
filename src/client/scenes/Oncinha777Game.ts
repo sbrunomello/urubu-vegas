@@ -10,6 +10,7 @@ import { createActionId, playOncinha } from '../api/urubuVegasApi';
 import { feedbackEngine } from '../feedback/FeedbackEngine';
 import { applyServerState, appState } from '../state/appState';
 import {
+  CASINO_COLORS,
   addMascot,
   createButton,
   drawCasinoBackdrop,
@@ -57,9 +58,11 @@ export class Oncinha777Game extends Scene {
   create(): void {
     drawCasinoBackdrop(this);
     this.root = this.add.container(0, 0);
+    feedbackEngine.sceneOpen('slots');
+
     this.root.add(
       this.add
-        .text(0, -334, 'ONCINHA 777', {
+        .text(48, -332, 'ONCINHA 777', {
           fontFamily: 'Arial Black',
           fontSize: '48px',
           color: '#ffffff',
@@ -68,33 +71,44 @@ export class Oncinha777Game extends Scene {
         })
         .setOrigin(0.5)
     );
-    this.root.add(addMascot(this, -414, -66, 1.04, 'mascot-oncinha'));
-    this.balanceText = this.add.text(-430, -284, '', {
-      fontFamily: 'Arial Black',
-      fontSize: '19px',
-      color: '#ffd54a',
-    });
-    this.statusText = this.add
-      .text(0, -284, 'Velvet reels are warm.', {
-        fontFamily: 'Arial',
-        fontSize: '18px',
-        color: '#f3d7ff',
-        fixedWidth: 480,
+    this.root.add(addMascot(this, -418, -62, 1.12, 'mascot-oncinha'));
+
+    this.root.add([
+      this.add.rectangle(-326, -282, 228, 46, 0x160d15, 0.95).setStrokeStyle(1, CASINO_COLORS.gold, 0.42),
+      this.add.rectangle(106, -282, 500, 46, 0x160d15, 0.9).setStrokeStyle(1, 0xff6f91, 0.32),
+    ]);
+    this.balanceText = this.add
+      .text(-326, -282, '', {
+        fontFamily: 'Arial Black',
+        fontSize: '16px',
+        color: '#ffd45a',
+        fixedWidth: 210,
         align: 'center',
       })
-      .setOrigin(0.5, 0);
+      .setOrigin(0.5);
+    this.statusText = this.add
+      .text(106, -282, 'GLAMOUR. GLITTER. QUESTIONABLE LUCK.', {
+        fontFamily: 'Arial Black',
+        fontSize: '13px',
+        color: '#f3d7ff',
+        fixedWidth: 460,
+        align: 'center',
+      })
+      .setOrigin(0.5);
     this.root.add([this.balanceText, this.statusText]);
+
     this.createReels();
     this.createControls();
     this.root.add(
       this.add
-        .text(0, 344, appState.disclaimer, {
+        .text(0, 342, appState.disclaimer, {
           fontFamily: 'Arial',
-          fontSize: '14px',
-          color: '#b9aecf',
+          fontSize: '13px',
+          color: '#a99fba',
         })
         .setOrigin(0.5)
     );
+
     this.refreshHud();
     this.layout();
     this.scale.on('resize', this.layout, this);
@@ -102,37 +116,32 @@ export class Oncinha777Game extends Scene {
       this.scale.off('resize', this.layout, this);
       this.spinTimer?.destroy();
     });
-    makeKey(this, Phaser.Input.Keyboard.KeyCodes.SPACE, () =>
-      this.startRound()
-    );
-    makeKey(this, Phaser.Input.Keyboard.KeyCodes.LEFT, () =>
-      this.changeBet(-1)
-    );
-    makeKey(this, Phaser.Input.Keyboard.KeyCodes.RIGHT, () =>
-      this.changeBet(1)
-    );
-    makeKey(this, Phaser.Input.Keyboard.KeyCodes.ESC, () =>
-      this.scene.start('CasinoLobby')
-    );
+    makeKey(this, Phaser.Input.Keyboard.KeyCodes.SPACE, () => this.startRound());
+    makeKey(this, Phaser.Input.Keyboard.KeyCodes.LEFT, () => this.changeBet(-1));
+    makeKey(this, Phaser.Input.Keyboard.KeyCodes.RIGHT, () => this.changeBet(1));
+    makeKey(this, Phaser.Input.Keyboard.KeyCodes.ESC, () => this.scene.start('CasinoLobby'));
   }
 
   private createReels(): void {
-    const startX = -268;
-    const startY = -180;
-    const cellW = 132;
-    const cellH = 112;
+    const startX = -220;
+    const startY = -176;
+    const cellW = 126;
+    const cellH = 104;
+    const frameX = 52;
+    const frameY = -58;
+
     this.root?.add([
-      this.add.rectangle(16, -58, 734, 390, 0x070913, 0.58),
-      this.add
-        .rectangle(16, -58, 734, 390, 0x1a1018, 0.38)
-        .setStrokeStyle(2, 0xffa33f, 0.24),
+      this.add.rectangle(frameX, frameY + 8, 716, 376, 0x000000, 0.38),
+      this.add.rectangle(frameX, frameY, 716, 376, 0x0b060d, 0.96).setStrokeStyle(3, CASINO_COLORS.gold, 0.5),
+      this.add.rectangle(frameX, frameY, 696, 356, 0x1a0e16, 0.74).setStrokeStyle(1, 0xff6f91, 0.35),
+      this.add.rectangle(frameX, frameY - 174, 646, 2, CASINO_COLORS.gold, 0.28),
     ]);
+
     for (let row = 0; row < ONCINHA_ROWS; row += 1) {
       for (let reel = 0; reel < ONCINHA_REELS; reel += 1) {
         const x = startX + reel * (cellW + 10);
         const y = startY + row * (cellH + 10);
-        const symbol =
-          RANDOM_SYMBOLS[(row + reel) % RANDOM_SYMBOLS.length] ?? 'pearl';
+        const symbol = RANDOM_SYMBOLS[(row + reel) % RANDOM_SYMBOLS.length] ?? 'pearl';
         const cell = this.createSymbolCell(x, y, row, reel, symbol);
         this.cells.push(cell);
         this.root?.add(cell.container);
@@ -149,73 +158,71 @@ export class Oncinha777Game extends Scene {
   ): SymbolCell {
     const definition = getOncinhaSymbolDefinition(symbol);
     const container = this.add.container(x, y);
+    const glow = this.add.rectangle(0, 2, 130, 108, definition.color, 0.035);
     const panel = this.add
-      .rectangle(0, 0, 132, 112, 0x1c1019, 0.98)
-      .setStrokeStyle(2, definition.color, 0.62);
-    const image = this.add
-      .image(0, -7, definition.assetKey)
-      .setDisplaySize(76, 76);
-    const name = this.add
-      .text(0, 35, definition.label.toUpperCase(), {
-        fontFamily: 'Arial Black',
-        fontSize: '10px',
-        color: '#fff7fb',
-        align: 'center',
-        fixedWidth: 112,
-      })
-      .setOrigin(0.5);
-    container.add([panel, image, name]);
+      .rectangle(0, 0, 122, 100, 0x1c1019, 0.99)
+      .setStrokeStyle(2, definition.color, 0.42);
+    const innerGlow = this.add.circle(0, 0, 38, definition.color, 0.075);
+    const image = this.add.image(0, 0, definition.assetKey).setDisplaySize(82, 82);
+    container.add([glow, panel, innerGlow, image]);
     return { container, panel, image, row, reel };
   }
 
   private createControls(): void {
-    this.betDownButton = createButton(this, -334, 246, {
-      width: 82,
+    this.betDownButton = createButton(this, -330, 246, {
+      width: 72,
       height: 54,
-      label: '-',
-      fill: 0x17132d,
-      stroke: 0xffd54a,
+      label: '−',
+      fill: 0x171020,
+      stroke: CASINO_COLORS.gold,
       fontSize: 24,
       onPress: () => this.changeBet(-1),
     });
     this.root?.add(this.betDownButton);
+
+    this.root?.add(
+      this.add.rectangle(-210, 246, 152, 58, 0x160d15, 0.94).setStrokeStyle(1, CASINO_COLORS.gold, 0.3)
+    );
     this.betText = this.add
       .text(-210, 246, '', {
         fontFamily: 'Arial Black',
-        fontSize: '20px',
+        fontSize: '17px',
         color: '#ffffff',
-        fixedWidth: 170,
+        fixedWidth: 142,
         align: 'center',
       })
       .setOrigin(0.5);
     this.root?.add(this.betText);
-    this.betUpButton = createButton(this, -86, 246, {
-      width: 82,
+
+    this.betUpButton = createButton(this, -90, 246, {
+      width: 72,
       height: 54,
       label: '+',
-      fill: 0x17132d,
-      stroke: 0xffd54a,
+      fill: 0x171020,
+      stroke: CASINO_COLORS.gold,
       fontSize: 24,
       onPress: () => this.changeBet(1),
     });
     this.root?.add(this.betUpButton);
-    this.playButton = createButton(this, 170, 246, {
-      width: 250,
+
+    this.playButton = createButton(this, 166, 246, {
+      width: 246,
       height: 72,
       label: 'SPIN',
       fill: 0xa51f3e,
-      stroke: 0xffd54a,
+      stroke: CASINO_COLORS.gold,
       fontSize: 28,
       onPress: () => this.startRound(),
     });
     this.root?.add(this.playButton);
+
     this.root?.add(
-      createButton(this, 386, 246, {
-        width: 138,
+      createButton(this, 382, 246, {
+        width: 136,
         height: 54,
         label: 'LOBBY',
-        fill: 0x17132d,
-        stroke: 0x69f7ff,
+        fill: 0x171020,
+        stroke: CASINO_COLORS.cyan,
         onPress: () => this.scene.start('CasinoLobby'),
       })
     );
@@ -226,22 +233,25 @@ export class Oncinha777Game extends Scene {
     const betValues = appState.games['oncinha-777'].betValues;
     const index = betValues.indexOf(appState.selectedBet);
     const next = Phaser.Math.Clamp(index + direction, 0, betValues.length - 1);
+    if (next === index) return;
     appState.selectedBet = betValues[next] ?? appState.selectedBet;
+    feedbackEngine.betChange();
     this.refreshHud();
   }
 
   private startRound(): void {
     if (this.playing) return;
     if (!appState.player) {
-      this.setStatus(appState.lastError ?? 'Player not loaded.');
+      this.setStatus(appState.lastError ?? 'PLAYER NOT READY.');
       return;
     }
     if (appState.player.balance < appState.selectedBet) {
-      this.setStatus('Not enough virtual credits.');
+      this.setStatus('NOT ENOUGH FAKE CASH.');
       return;
     }
+
     this.playing = true;
-    this.setStatus('Oncinha is checking the server ledger...');
+    this.setStatus('ONCINHA IS FEELING LUCKY...');
     this.setInputsEnabled(false);
     feedbackEngine.reelStart(this);
     this.startAnticipation();
@@ -255,11 +265,7 @@ export class Oncinha777Game extends Scene {
         this.spinTimer = null;
         this.playing = false;
         this.setInputsEnabled(true);
-        this.setStatus(
-          error instanceof Error
-            ? error.message
-            : 'Connection hiccup. Try again.'
-        );
+        this.setStatus(error instanceof Error ? error.message : 'THE VELVET CURTAIN FELL. TRY AGAIN.');
       });
   }
 
@@ -270,9 +276,7 @@ export class Oncinha777Game extends Scene {
       loop: true,
       callback: () => {
         this.cells.forEach((cell) => {
-          const next =
-            RANDOM_SYMBOLS[Phaser.Math.Between(0, RANDOM_SYMBOLS.length - 1)] ??
-            'pearl';
+          const next = RANDOM_SYMBOLS[Phaser.Math.Between(0, RANDOM_SYMBOLS.length - 1)] ?? 'pearl';
           this.paintCell(cell, next, false);
         });
       },
@@ -280,21 +284,18 @@ export class Oncinha777Game extends Scene {
   }
 
   private stopAtResult(result: OncinhaRoundResult): void {
-    this.time.delayedCall(550, () => {
+    this.time.delayedCall(520, () => {
       this.spinTimer?.destroy();
+      this.spinTimer = null;
       for (let reel = 0; reel < ONCINHA_REELS; reel += 1) {
         this.time.delayedCall(reel * 170, () => {
           this.cells
             .filter((cell) => cell.reel === reel)
             .forEach((cell) => {
-              this.paintCell(
-                cell,
-                result.grid[cell.row]?.[cell.reel] ?? 'pearl',
-                false
-              );
+              this.paintCell(cell, result.grid[cell.row]?.[cell.reel] ?? 'pearl', false);
               this.tweens.add({
                 targets: cell.container,
-                y: cell.container.y - 10,
+                y: cell.container.y - 11,
                 yoyo: true,
                 duration: 120,
                 ease: 'Back.Out',
@@ -314,17 +315,28 @@ export class Oncinha777Game extends Scene {
     result.lineWins.forEach((line) =>
       line.cells.forEach((cell) => winningCells.add(`${cell.row}:${cell.reel}`))
     );
-    result.scatterWin?.cells.forEach((cell) =>
-      winningCells.add(`${cell.row}:${cell.reel}`)
-    );
+    result.scatterWin?.cells.forEach((cell) => winningCells.add(`${cell.row}:${cell.reel}`));
+
     this.cells.forEach((cell) => {
       const symbol = result.grid[cell.row]?.[cell.reel] ?? 'pearl';
-      this.paintCell(
-        cell,
-        symbol,
-        winningCells.has(`${cell.row}:${cell.reel}`)
-      );
+      const winning = winningCells.has(`${cell.row}:${cell.reel}`);
+      this.paintCell(cell, symbol, winning);
+      if (winning) {
+        this.tweens.add({
+          targets: cell.container,
+          scaleX: 1.1,
+          scaleY: 1.1,
+          yoyo: true,
+          repeat: 2,
+          duration: 150,
+          ease: 'Sine.InOut',
+        });
+      }
     });
+
+    if (result.scatterWin) {
+      feedbackEngine.bonus(this, this.scale.width / 2, this.scale.height / 2);
+    }
     feedbackEngine.win(
       this,
       this.scale.width / 2,
@@ -332,46 +344,32 @@ export class Oncinha777Game extends Scene {
       result.category,
       result.reward
     );
-    const winDetail =
-      result.lineWins.length > 0
-        ? `${result.lineWins.length} line${result.lineWins.length === 1 ? '' : 's'}`
+
+    const detail = result.scatterWin
+      ? ` • ${result.scatterWin.count} SCATTERS`
+      : result.lineWins.length > 1
+        ? ` • ${result.lineWins.length} LINES`
         : '';
-    const scatterDetail = result.scatterWin
-      ? `${result.scatterWin.count} scatter bonus`
-      : '';
-    const detail = [winDetail, scatterDetail].filter(Boolean).join(' + ');
     this.setStatus(
       result.category === 'miss'
-        ? `Miss. -${formatCredits(result.bet)}`
-        : `${result.category.toUpperCase()} ${result.multiplier.toFixed(2)}x paid ${formatCredits(
-            result.reward
-          )}${detail ? ` (${detail})` : ''}`
+        ? `NO DIAMONDS TODAY. −${formatCredits(result.bet)}`
+        : `${result.category.toUpperCase()} • ${result.multiplier.toFixed(2)}x • +${formatCredits(result.reward)}${detail}`
     );
     this.refreshHud();
     this.playing = false;
     this.setInputsEnabled(true);
   }
 
-  private paintCell(
-    cell: SymbolCell,
-    symbol: OncinhaSymbolId,
-    winning: boolean
-  ): void {
+  private paintCell(cell: SymbolCell, symbol: OncinhaSymbolId, winning: boolean): void {
     const definition = getOncinhaSymbolDefinition(symbol);
-    cell.panel.setStrokeStyle(
-      winning ? 5 : 2,
-      definition.color,
-      winning ? 1 : 0.62
-    );
-    cell.panel.setFillStyle(winning ? 0x2a1519 : 0x1c1019, 0.98);
+    cell.panel.setStrokeStyle(winning ? 4 : 2, winning ? CASINO_COLORS.gold : definition.color, winning ? 1 : 0.42);
+    cell.panel.setFillStyle(winning ? 0x2a1519 : 0x1c1019, 0.99);
     cell.image.setTexture(definition.assetKey);
-    cell.container.setScale(winning ? 1.07 : 1);
+    if (!winning) cell.container.setScale(1);
   }
 
   private refreshHud(): void {
-    this.balanceText?.setText(
-      `Balance ${formatCredits(appState.player?.balance ?? 0)}`
-    );
+    this.balanceText?.setText(`BANK  ${formatCredits(appState.player?.balance ?? 0)}`);
     this.betText?.setText(`BET\n${formatCredits(appState.selectedBet)}`);
   }
 
