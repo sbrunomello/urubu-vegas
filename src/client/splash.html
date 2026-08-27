@@ -11,30 +11,27 @@
   </head>
   <body>
     <main class="preview" aria-label="Urubu Vegas preview">
+      <div class="bulbs" aria-hidden="true"></div>
       <section class="brand">
-        <div class="mascot" aria-hidden="true">
-          <div class="wing wing-left"></div>
-          <div class="wing wing-right"></div>
-          <div class="body"></div>
-          <div class="head">
-            <span class="eye left"></span>
-            <span class="eye right"></span>
-            <span class="beak"></span>
-          </div>
-          <div class="bow"></div>
+        <div class="mascot-shell" aria-hidden="true">
+          <span class="mascot-glow"></span>
+          <img class="mascot" src="/assets/mascots/urubu/host.png" alt="" />
         </div>
         <div class="copy">
-          <p class="eyebrow">ARCADE CASINO FICTION</p>
+          <p class="eyebrow">WELCOME TO</p>
           <h1>URUBU VEGAS</h1>
           <p class="tagline">Where fortunes go to die.</p>
+          <div class="chips" aria-label="Game highlights">
+            <span>4 GAMES</span>
+            <span>FAKE CASH</span>
+            <span>BAD DECISIONS</span>
+          </div>
         </div>
       </section>
-      <section class="stats" aria-label="Preview stats">
-        <span>URUBUZINHO open</span>
-        <span>5x3 reels</span>
-        <span>Virtual credits</span>
-      </section>
-      <button id="start-button" type="button">ENTER URUBU VEGAS</button>
+      <p class="ticker" aria-label="Available games">
+        URUBUZINHO <b>•</b> ONCINHA 777 <b>•</b> JACARE CRASH <b>•</b> CAPIVARA ROULETTE
+      </p>
+      <button id="start-button" type="button">ENTER THE CASINO <span aria-hidden="true">›</span></button>
       <p class="disclaimer">Virtual credits only. No purchases, prizes or withdrawals.</p>
     </main>
     <script type="module" src="splash.ts" defer></script>
