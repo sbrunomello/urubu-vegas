@@ -117,7 +117,7 @@ extras.post('/house/bailout', async (c) => {
     for (let attempt = 0; attempt < 4; attempt += 1) {
       const now = Date.now();
       const tx = await redis.watch(pKey, idemKey);
-      const replayed = await tx.get(idemKey);
+      const replayed = await redis.get(idemKey);
 
       if (replayed) {
         await tx.unwatch();
@@ -127,7 +127,7 @@ extras.post('/house/bailout', async (c) => {
       }
 
       const player = deserializePlayer(
-        await tx.hGetAll(pKey),
+        await redis.hGetAll(pKey),
         identity.userId,
         identity.username,
         now
