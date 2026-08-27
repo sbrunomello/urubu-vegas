@@ -174,7 +174,7 @@ const updateLargestRecordedWin = async (reward: number): Promise<void> => {
 
   for (let attempt = 0; attempt < 4; attempt += 1) {
     const tx = await redis.watch(key);
-    const row = await tx.hGetAll(key);
+    const row = await redis.hGetAll(key);
     const current = Number(row.largestRecordedWin ?? 0);
     if (Number.isFinite(current) && current >= reward) {
       await tx.unwatch();
@@ -379,10 +379,10 @@ reliableApi.post('/games/jacare/start', async (c) => {
       const now = Date.now();
       const tx = await redis.watch(pKey, idemKey);
       const existingSnapshot = parseStoredSnapshot<JacareCrashRound>(
-        await tx.get(idemKey)
+        await redis.get(idemKey)
       );
       const player = deserializePlayer(
-        await tx.hGetAll(pKey),
+        await redis.hGetAll(pKey),
         identity.userId,
         identity.username,
         now
@@ -499,14 +499,14 @@ reliableApi.post('/games/jacare/cashout', async (c) => {
       const tx = await redis.watch(pKey, idemKey, cKey);
       const existingSnapshot = parseStoredSnapshot<
         JacareCrashCashoutResponse['result']
-      >(await tx.get(idemKey));
+      >(await redis.get(idemKey));
       const player = deserializePlayer(
-        await tx.hGetAll(pKey),
+        await redis.hGetAll(pKey),
         identity.userId,
         identity.username,
         now
       );
-      const round = parseCrashRound(await tx.get(cKey));
+      const round = parseCrashRound(await redis.get(cKey));
       const secondary = await loadSecondaryState(identity.userId);
 
       const processed = processJacareCashout({
@@ -612,9 +612,9 @@ const playTransacted = async <TResult, TResponse extends { result: TResult }>(
     for (let attempt = 0; attempt < 6; attempt += 1) {
       const now = Date.now();
       const tx = await redis.watch(pKey, idemKey);
-      const existingSnapshot = parseStoredSnapshot<TResult>(await tx.get(idemKey));
+      const existingSnapshot = parseStoredSnapshot<TResult>(await redis.get(idemKey));
       const player = deserializePlayer(
-        await tx.hGetAll(pKey),
+        await redis.hGetAll(pKey),
         identity.userId,
         identity.username,
         now
