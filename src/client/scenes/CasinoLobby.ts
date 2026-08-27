@@ -121,6 +121,8 @@ export class CasinoLobby extends Scene {
       414,
       CASINO_COLORS.gold
     );
+    this.root.add(floorFrame);
+
     const floorHeader = this.add.container(0, -142);
     floorHeader.add([
       this.add.rectangle(0, 0, 820, 26, 0x12070d, 0.98),
@@ -205,17 +207,16 @@ export class CasinoLobby extends Scene {
     ]);
 
     this.root.add([
-      marquee,
-      bank,
-      house,
-      host,
-      floorFrame,
       floorHeader,
       navRail,
       leaderboards,
       profile,
       help,
       mute,
+      marquee,
+      bank,
+      house,
+      host,
       footer,
     ]);
 
