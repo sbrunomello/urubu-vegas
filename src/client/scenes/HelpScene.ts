@@ -12,10 +12,10 @@ import {
 } from '../ui/phaserUi';
 
 const RULES = [
-  ['URUBUZINHO', 'Spin five reels. WILD helps lines. SCATTER pays anywhere.'],
-  ['ONCINHA 777', 'Same basic rhythm, different symbols, odds and paytable.'],
-  ['JACARE CRASH', 'Start the round and cash out before the jacare chomps the multiplier.'],
-  ['CAPIVARA', 'Pick red, black, odd, even, low, high, zero or a number. Then spin.'],
+  ['URUBUZINHO', 'WILD completes lines. SCATTER pays anywhere.', CASINO_COLORS.violet],
+  ['ONCINHA 777', 'Same five reels, louder glamour, different paytable.', 0xff9f36],
+  ['JACARE CRASH', 'Start. Watch the multiplier. Cash out before CHOMP.', CASINO_COLORS.green],
+  ['CAPIVARA', 'Pick a side or number, then let the wheel decide.', CASINO_COLORS.pink],
 ] as const;
 
 export class HelpScene extends Scene {
@@ -30,85 +30,88 @@ export class HelpScene extends Scene {
     this.root = this.add.container(0, 0);
 
     this.root.add(
-      createVegasMarquee(this, 0, -310, 'HOUSE RULES', {
-        width: 640,
-        height: 102,
-        titleSize: 48,
-        subtitle: 'FOUR TABLES. ONE TERRIBLE IDEA.',
+      createVegasMarquee(this, 0, -302, 'HOUSE RULES', {
+        width: 650,
+        height: 92,
+        titleSize: 44,
+        subtitle: 'KNOW THE TABLE. BLAME YOURSELF LATER.',
         compact: true,
         accent: CASINO_COLORS.ruby,
       })
     );
 
-    const frame = createCabinetFrame(
-      this,
-      0,
-      -42,
-      820,
-      420,
-      CASINO_COLORS.gold
+    this.root.add(
+      createCabinetFrame(this, 0, -42, 850, 430, CASINO_COLORS.gold)
     );
-    this.root.add(frame);
 
-    RULES.forEach(([title, description], index) => {
-      const column = index % 2;
-      const row = Math.floor(index / 2);
-      const x = -200 + column * 400;
-      const y = -145 + row * 148;
-      const accent = [
-        CASINO_COLORS.violet,
-        0xff9f36,
-        CASINO_COLORS.green,
-        CASINO_COLORS.pink,
-      ][index] ?? CASINO_COLORS.gold;
-      const card = this.add.container(x, y);
-      card.add([
-        this.add.rectangle(0, 6, 350, 126, 0x000000, 0.38),
+    this.root.add(
+      this.add
+        .text(-356, -214, 'TABLE GUIDE', {
+          fontFamily: VEGAS_FONT_BODY,
+          fontSize: '9px',
+          fontStyle: 'bold',
+          color: '#bfae91',
+          letterSpacing: 2,
+        })
+    );
+
+    RULES.forEach(([title, description, accent], index) => {
+      const y = -150 + index * 72;
+      const row = this.add.container(0, y);
+      row.add([
+        this.add.rectangle(0, 0, 744, 58, 0x0b0810, 0.82),
+        this.add.rectangle(-366, 0, 5, 40, accent, 0.94),
+        this.add.circle(-330, 0, 13, accent, 0.13).setStrokeStyle(1, accent, 0.45),
         this.add
-          .rectangle(0, 0, 350, 120, 0x0b0810, 0.98)
-          .setStrokeStyle(2, accent, 0.52),
-        this.add.rectangle(-170, 0, 5, 92, accent, 0.92),
-        this.add
-          .text(-150, -38, title, {
+          .text(-330, 0, String(index + 1), {
             fontFamily: VEGAS_FONT_DISPLAY,
-            fontSize: '20px',
+            fontSize: '12px',
             color: '#fff8ef',
-            fixedWidth: 300,
+          })
+          .setOrigin(0.5),
+        this.add
+          .text(-300, -11, title, {
+            fontFamily: VEGAS_FONT_DISPLAY,
+            fontSize: '17px',
+            color: '#fff8ef',
+            fixedWidth: 190,
           }),
         this.add
-          .text(-150, -4, description, {
+          .text(-90, 0, description, {
             fontFamily: VEGAS_FONT_BODY,
-            fontSize: '13px',
+            fontSize: '12px',
             color: '#d8ccd7',
-            fixedWidth: 292,
-            wordWrap: { width: 292 },
-          }),
+            fixedWidth: 390,
+          })
+          .setOrigin(0, 0.5),
       ]);
-      this.root?.add(card);
+      this.root?.add(row);
     });
 
-    const quick = this.add.container(0, 128);
+    const quick = this.add.container(0, 140);
     quick.add([
       this.add
-        .rectangle(0, 0, 760, 62, 0x160b13, 0.96)
-        .setStrokeStyle(1, CASINO_COLORS.gold, 0.3),
+        .rectangle(0, 0, 744, 52, 0x150a12, 0.9)
+        .setStrokeStyle(1, CASINO_COLORS.gold, 0.22),
       this.add
-        .text(-350, -12, 'QUICK KEYS', {
+        .text(-350, -9, 'QUICK KEYS', {
           fontFamily: VEGAS_FONT_DISPLAY,
-          fontSize: '13px',
+          fontSize: '11px',
           color: '#ffd45a',
         }),
       this.add
-        .text(-350, 10, 'SPACE = play   •   ← → = bet   •   ESC = lobby', {
+        .text(-350, 10, 'SPACE play   •   ← → bet   •   ESC lobby', {
           fontFamily: VEGAS_FONT_BODY,
-          fontSize: '12px',
-          color: '#ffffff',
+          fontSize: '10px',
+          color: '#d9cedb',
         }),
       this.add
-        .text(340, 0, 'TOUCH FRIENDLY', {
-          fontFamily: VEGAS_FONT_DISPLAY,
-          fontSize: '13px',
+        .text(350, 0, 'TAP CONTROLS ON MOBILE', {
+          fontFamily: VEGAS_FONT_BODY,
+          fontSize: '9px',
+          fontStyle: 'bold',
           color: '#69f59a',
+          letterSpacing: 1,
         })
         .setOrigin(1, 0.5),
     ]);
@@ -116,9 +119,9 @@ export class HelpScene extends Scene {
 
     this.root.add(
       this.add
-        .text(0, 184, appState.disclaimer, {
+        .text(0, 186, appState.disclaimer, {
           fontFamily: VEGAS_FONT_BODY,
-          fontSize: '12px',
+          fontSize: '11px',
           color: '#ffe49a',
           align: 'center',
           fixedWidth: 720,
@@ -127,13 +130,13 @@ export class HelpScene extends Scene {
     );
 
     this.root.add(
-      createButton(this, 0, 256, {
+      createButton(this, 0, 246, {
         width: 220,
-        height: 58,
+        height: 54,
         label: 'BACK TO CASINO',
         fill: CASINO_COLORS.wine,
         stroke: CASINO_COLORS.gold,
-        fontSize: 16,
+        fontSize: 15,
         onPress: () => this.scene.start('CasinoLobby'),
       })
     );
@@ -152,8 +155,8 @@ export class HelpScene extends Scene {
     this.root
       .setPosition(
         this.scale.width / 2,
-        isPortrait ? this.scale.height * 0.44 : this.scale.height / 2
+        isPortrait ? this.scale.height * 0.45 : this.scale.height / 2
       )
-      .setScale(safeScale(this, isPortrait ? 900 : 1024, isPortrait ? 720 : 760));
+      .setScale(safeScale(this, isPortrait ? 900 : 1024, isPortrait ? 700 : 760));
   }
 }
