@@ -140,6 +140,11 @@ export class CasinoLobby extends Scene {
         .setOrigin(0.5),
     ]);
 
+    // Add the structural shell first. Phaser containers render in insertion order;
+    // adding the cabinet after the table cards would paint its opaque inner panel
+    // over every game card inside the Reddit webview.
+    this.root.add([marquee, bank, house, host, floorFrame, floorHeader]);
+
     GAME_DEFINITIONS.forEach((definition, index) => {
       const column = index % 2;
       const row = Math.floor(index / 2);
@@ -196,19 +201,7 @@ export class CasinoLobby extends Scene {
       },
     });
 
-    this.root.add([
-      marquee,
-      bank,
-      house,
-      host,
-      floorFrame,
-      floorHeader,
-      navRail,
-      leaderboards,
-      profile,
-      help,
-      mute,
-    ]);
+    this.root.add([navRail, leaderboards, profile, help, mute]);
 
     this.createBailoutOrNotice();
 
