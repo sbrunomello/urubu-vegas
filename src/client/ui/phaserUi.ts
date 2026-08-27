@@ -19,7 +19,7 @@ export const CASINO_COLORS = {
   violet: 0x9b7cff,
   pink: 0xff4f87,
   danger: 0xff4b63,
-} as const;
+};
 
 export const VEGAS_FONT_DISPLAY =
   'Impact, Haettenschweiler, "Arial Black", "Franklin Gothic Heavy", sans-serif';
@@ -62,14 +62,13 @@ export const formatCredits = (value: number): string =>
 
 const pulse = (
   scene: Scene,
-  target: Phaser.GameObjects.GameObject,
+  target: GameObjects.Rectangle | GameObjects.Arc | GameObjects.Text,
   alphaFrom: number,
   alphaTo: number,
   duration: number,
   delay = 0
 ): void => {
-  const alphaTarget = target as Phaser.GameObjects.Components.Alpha;
-  alphaTarget.setAlpha(alphaFrom);
+  target.setAlpha(alphaFrom);
   scene.tweens.add({
     targets: target,
     alpha: alphaTo,
