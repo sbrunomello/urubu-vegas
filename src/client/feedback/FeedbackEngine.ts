@@ -6,7 +6,16 @@ import { hapticsEngine } from '../haptics/HapticsEngine';
 
 export class FeedbackEngine {
   async unlock(): Promise<void> {
-    await soundEngine.unlock();
+    // Some Reddit mobile webviews can delay/reject AudioContext.resume(). Audio is
+    // cosmetic: a stuck audio promise must never swallow a gameplay button press.
+    try {
+      await Promise.race([
+        soundEngine.unlock(),
+        new Promise<void>((resolve) => window.setTimeout(resolve, 220)),
+      ]);
+    } catch (error) {
+      console.warn('[urubu-vegas] audio unlock skipped:', error);
+    }
   }
 
   uiHover(): void {
