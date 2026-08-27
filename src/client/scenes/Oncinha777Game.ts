@@ -11,8 +11,13 @@ import { feedbackEngine } from '../feedback/FeedbackEngine';
 import { applyServerState, appState } from '../state/appState';
 import {
   CASINO_COLORS,
+  VEGAS_FONT_BODY,
+  VEGAS_FONT_DISPLAY,
   addMascot,
   createButton,
+  createCabinetFrame,
+  createHudPlaque,
+  createVegasMarquee,
   drawCasinoBackdrop,
   formatCredits,
   makeKey,
@@ -61,49 +66,61 @@ export class Oncinha777Game extends Scene {
     feedbackEngine.sceneOpen('slots');
 
     this.root.add(
-      this.add
-        .text(48, -332, 'ONCINHA 777', {
-          fontFamily: 'Arial Black',
-          fontSize: '48px',
-          color: '#ffffff',
-          stroke: '#9a1832',
-          strokeThickness: 7,
-        })
-        .setOrigin(0.5)
+      createVegasMarquee(this, 68, -318, 'ONCINHA 777', {
+        width: 580,
+        height: 92,
+        titleSize: 42,
+        compact: true,
+        accent: CASINO_COLORS.pink,
+      })
     );
-    this.root.add(addMascot(this, -418, -62, 1.12, 'mascot-oncinha'));
+    this.root.add(addMascot(this, -408, -82, 1.08, 'mascot-oncinha'));
 
-    this.root.add([
-      this.add.rectangle(-326, -282, 228, 46, 0x160d15, 0.95).setStrokeStyle(1, CASINO_COLORS.gold, 0.42),
-      this.add.rectangle(106, -282, 500, 46, 0x160d15, 0.9).setStrokeStyle(1, 0xff6f91, 0.32),
+    const bankPlaque = createHudPlaque(
+      this,
+      -344,
+      -266,
+      'BANKROLL',
+      formatCredits(appState.player?.balance ?? 0),
+      CASINO_COLORS.gold,
+      220
+    );
+    this.root.add(bankPlaque);
+    this.balanceText = bankPlaque
+      .list
+      .find(
+        (item): item is GameObjects.Text =>
+          item instanceof GameObjects.Text && item.text.startsWith('$')
+      ) ?? null;
+
+    const statusFrame = this.add.container(106, -266);
+    statusFrame.add([
+      this.add
+        .rectangle(0, 0, 486, 46, 0x12070e, 0.98)
+        .setStrokeStyle(1, CASINO_COLORS.pink, 0.38),
+      this.add.rectangle(-236, 0, 4, 30, CASINO_COLORS.pink, 0.86),
     ]);
-    this.balanceText = this.add
-      .text(-326, -282, '', {
-        fontFamily: 'Arial Black',
-        fontSize: '16px',
-        color: '#ffd45a',
-        fixedWidth: 210,
-        align: 'center',
-      })
-      .setOrigin(0.5);
     this.statusText = this.add
-      .text(106, -282, 'GLAMOUR. GLITTER. QUESTIONABLE LUCK.', {
-        fontFamily: 'Arial Black',
-        fontSize: '13px',
-        color: '#f3d7ff',
-        fixedWidth: 460,
+      .text(0, 0, 'GLAMOUR. GLITTER. QUESTIONABLE LUCK.', {
+        fontFamily: VEGAS_FONT_BODY,
+        fontSize: '12px',
+        fontStyle: 'bold',
+        color: '#f6ddeb',
+        fixedWidth: 440,
         align: 'center',
+        letterSpacing: 0.5,
       })
       .setOrigin(0.5);
-    this.root.add([this.balanceText, this.statusText]);
+    statusFrame.add(this.statusText);
+    this.root.add(statusFrame);
 
     this.createReels();
     this.createControls();
     this.root.add(
       this.add
         .text(0, 342, appState.disclaimer, {
-          fontFamily: 'Arial',
-          fontSize: '13px',
+          fontFamily: VEGAS_FONT_BODY,
+          fontSize: '12px',
           color: '#a99fba',
         })
         .setOrigin(0.5)
@@ -130,11 +147,21 @@ export class Oncinha777Game extends Scene {
     const frameX = 52;
     const frameY = -58;
 
+    this.root?.add(
+      createCabinetFrame(this, frameX, frameY, 742, 392, CASINO_COLORS.pink)
+    );
     this.root?.add([
-      this.add.rectangle(frameX, frameY + 8, 716, 376, 0x000000, 0.38),
-      this.add.rectangle(frameX, frameY, 716, 376, 0x0b060d, 0.96).setStrokeStyle(3, CASINO_COLORS.gold, 0.5),
-      this.add.rectangle(frameX, frameY, 696, 356, 0x1a0e16, 0.74).setStrokeStyle(1, 0xff6f91, 0.35),
-      this.add.rectangle(frameX, frameY - 174, 646, 2, CASINO_COLORS.gold, 0.28),
+      this.add
+        .rectangle(frameX, frameY - 166, 650, 12, CASINO_COLORS.goldSoft, 0.92)
+        .setStrokeStyle(1, CASINO_COLORS.champagne, 0.45),
+      this.add
+        .text(frameX, frameY - 166, 'VELVET ROOM • 777 • DIAMONDS & DRAMA', {
+          fontFamily: VEGAS_FONT_DISPLAY,
+          fontSize: '10px',
+          color: '#2d1606',
+          letterSpacing: 1,
+        })
+        .setOrigin(0.5),
     ]);
 
     for (let row = 0; row < ONCINHA_ROWS; row += 1) {
@@ -158,17 +185,23 @@ export class Oncinha777Game extends Scene {
   ): SymbolCell {
     const definition = getOncinhaSymbolDefinition(symbol);
     const container = this.add.container(x, y);
-    const glow = this.add.rectangle(0, 2, 130, 108, definition.color, 0.035);
+    const glow = this.add.rectangle(0, 3, 130, 108, definition.color, 0.035);
+    const goldLip = this.add.rectangle(0, 0, 126, 104, CASINO_COLORS.goldSoft, 0.3);
     const panel = this.add
-      .rectangle(0, 0, 122, 100, 0x1c1019, 0.99)
-      .setStrokeStyle(2, definition.color, 0.42);
-    const innerGlow = this.add.circle(0, 0, 38, definition.color, 0.075);
+      .rectangle(0, 0, 120, 98, 0x1c1019, 0.99)
+      .setStrokeStyle(2, definition.color, 0.5);
+    const topShine = this.add.rectangle(0, -44, 102, 2, 0xffffff, 0.11);
+    const innerGlow = this.add.circle(0, 0, 39, definition.color, 0.08);
     const image = this.add.image(0, 0, definition.assetKey).setDisplaySize(82, 82);
-    container.add([glow, panel, innerGlow, image]);
+    container.add([glow, goldLip, panel, topShine, innerGlow, image]);
     return { container, panel, image, row, reel };
   }
 
   private createControls(): void {
+    this.root?.add(
+      createCabinetFrame(this, 30, 246, 846, 92, CASINO_COLORS.gold)
+    );
+
     this.betDownButton = createButton(this, -330, 246, {
       width: 72,
       height: 54,
@@ -181,13 +214,15 @@ export class Oncinha777Game extends Scene {
     this.root?.add(this.betDownButton);
 
     this.root?.add(
-      this.add.rectangle(-210, 246, 152, 58, 0x160d15, 0.94).setStrokeStyle(1, CASINO_COLORS.gold, 0.3)
+      this.add
+        .rectangle(-210, 246, 152, 58, 0x12070e, 0.98)
+        .setStrokeStyle(1, CASINO_COLORS.gold, 0.4)
     );
     this.betText = this.add
       .text(-210, 246, '', {
-        fontFamily: 'Arial Black',
+        fontFamily: VEGAS_FONT_DISPLAY,
         fontSize: '17px',
-        color: '#ffffff',
+        color: '#fff8ef',
         fixedWidth: 142,
         align: 'center',
       })
@@ -362,14 +397,18 @@ export class Oncinha777Game extends Scene {
 
   private paintCell(cell: SymbolCell, symbol: OncinhaSymbolId, winning: boolean): void {
     const definition = getOncinhaSymbolDefinition(symbol);
-    cell.panel.setStrokeStyle(winning ? 4 : 2, winning ? CASINO_COLORS.gold : definition.color, winning ? 1 : 0.42);
+    cell.panel.setStrokeStyle(
+      winning ? 4 : 2,
+      winning ? CASINO_COLORS.gold : definition.color,
+      winning ? 1 : 0.5
+    );
     cell.panel.setFillStyle(winning ? 0x2a1519 : 0x1c1019, 0.99);
     cell.image.setTexture(definition.assetKey);
     if (!winning) cell.container.setScale(1);
   }
 
   private refreshHud(): void {
-    this.balanceText?.setText(`BANK  ${formatCredits(appState.player?.balance ?? 0)}`);
+    this.balanceText?.setText(formatCredits(appState.player?.balance ?? 0));
     this.betText?.setText(`BET\n${formatCredits(appState.selectedBet)}`);
   }
 
