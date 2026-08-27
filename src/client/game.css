@@ -1,5 +1,6 @@
 * {
   box-sizing: border-box;
+  -webkit-tap-highlight-color: transparent;
 }
 
 html,
@@ -14,6 +15,8 @@ body {
     #050208;
   overscroll-behavior: none;
   touch-action: manipulation;
+  user-select: none;
+  -webkit-user-select: none;
 }
 
 #app,
@@ -24,9 +27,24 @@ body {
   overflow: hidden;
 }
 
+#game-container {
+  padding:
+    env(safe-area-inset-top, 0)
+    env(safe-area-inset-right, 0)
+    env(safe-area-inset-bottom, 0)
+    env(safe-area-inset-left, 0);
+}
+
 #game-container canvas {
   display: block;
   width: 100% !important;
   height: 100% !important;
   outline: 0;
+  touch-action: manipulation;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  #game-container canvas {
+    scroll-behavior: auto;
+  }
 }
