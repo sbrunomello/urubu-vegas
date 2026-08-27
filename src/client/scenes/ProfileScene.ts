@@ -1,7 +1,14 @@
 import { GameObjects, Scene } from 'phaser';
 import { appState } from '../state/appState';
 import {
+  CASINO_COLORS,
+  VEGAS_FONT_BODY,
+  VEGAS_FONT_DISPLAY,
+  addMascot,
   createButton,
+  createCabinetFrame,
+  createHudPlaque,
+  createVegasMarquee,
   drawCasinoBackdrop,
   formatCredits,
   safeScale,
@@ -9,11 +16,11 @@ import {
 import { soundEngine } from '../audio/SoundEngine';
 
 const GAME_LABELS = {
-  urubuzinho: 'Urubuzinho',
-  'oncinha-777': 'Oncinha 777',
-  'jacare-crash': 'Jacare Crash',
-  'capivara-roulette': 'Capivara Roulette',
-};
+  urubuzinho: { label: 'URUBUZINHO', accent: CASINO_COLORS.violet },
+  'oncinha-777': { label: 'ONCINHA 777', accent: 0xff9f36 },
+  'jacare-crash': { label: 'JACARE CRASH', accent: CASINO_COLORS.green },
+  'capivara-roulette': { label: 'CAPIVARA', accent: CASINO_COLORS.pink },
+} as const;
 
 export class ProfileScene extends Scene {
   private root: GameObjects.Container | null = null;
@@ -28,96 +35,197 @@ export class ProfileScene extends Scene {
     this.root = this.add.container(0, 0);
     const player = appState.player;
 
-    this.root.add(
-      this.add
-        .text(0, -290, 'PROFILE', {
-          fontFamily: 'Arial Black',
-          fontSize: '54px',
-          color: '#ffffff',
-          stroke: '#7a1230',
-          strokeThickness: 7,
-        })
-        .setOrigin(0.5)
-    );
-
-    const lines = player
-      ? [
-          `u/${player.username}`,
-          `Balance: ${formatCredits(player.balance)}`,
-          `Total plays: ${player.totalRounds.toLocaleString()}`,
-          `Total virtual rewards: ${formatCredits(player.totalRewarded)}`,
-          `Biggest win: ${formatCredits(player.biggestWin)}`,
-          `Best multiplier: ${player.bestMultiplier.toFixed(2)}x`,
-          `Best streak: ${player.bestStreak}`,
-          `Richest rank: ${appState.ranks.richest ?? '-'}`,
-        ]
-      : [appState.lastError ?? 'Player not loaded.'];
-
-    lines.forEach((line, index) => {
-      this.root?.add(
-        this.add.text(-250, -190 + index * 48, line, {
-          fontFamily: index === 0 ? 'Arial Black' : 'Arial',
-          fontSize: index === 0 ? '25px' : '21px',
-          color: index === 0 ? '#ffd54a' : '#ffffff',
-        })
-      );
+    const marquee = createVegasMarquee(this, 0, -310, 'PLAYER CLUB', {
+      width: 620,
+      height: 100,
+      titleSize: 48,
+      subtitle: 'YOUR EXTREMELY UNREGULATED-LOOKING LOYALTY CARD',
+      compact: true,
+      accent: CASINO_COLORS.ruby,
     });
+    this.root.add(marquee);
 
-    if (player) {
-      Object.entries(GAME_LABELS).forEach(([gameId, label], index) => {
-        const stats =
-          player.statsByGame[gameId as keyof typeof player.statsByGame];
-        this.root?.add(
-          this.add.text(210, -180 + index * 70, label.toUpperCase(), {
-            fontFamily: 'Arial Black',
-            fontSize: '13px',
-            color: '#ffd54a',
+    if (!player) {
+      this.root.add(
+        this.add
+          .text(0, -30, appState.lastError ?? 'PLAYER NOT LOADED.', {
+            fontFamily: VEGAS_FONT_DISPLAY,
+            fontSize: '24px',
+            color: '#ffffff',
           })
-        );
-        this.root?.add(
-          this.add.text(
-            210,
-            -158 + index * 70,
-            `${stats.plays} plays  |  ${stats.wins} wins`,
-            {
-              fontFamily: 'Arial',
-              fontSize: '17px',
+          .setOrigin(0.5)
+      );
+    } else {
+      const playerFrame = createCabinetFrame(
+        this,
+        -250,
+        -66,
+        400,
+        352,
+        CASINO_COLORS.gold
+      );
+      this.root.add(playerFrame);
+      this.root.add(addMascot(this, -360, -102, 0.78, 'mascot-urubu'));
+
+      this.root.add([
+        this.add
+          .text(-320, -218, 'MEMBER', {
+            fontFamily: VEGAS_FONT_BODY,
+            fontSize: '10px',
+            fontStyle: 'bold',
+            color: '#bfae91',
+            letterSpacing: 2,
+          }),
+        this.add
+          .text(-320, -192, `u/${player.username}`, {
+            fontFamily: VEGAS_FONT_DISPLAY,
+            fontSize: '30px',
+            color: '#fff5d0',
+            stroke: '#6e142c',
+            strokeThickness: 3,
+            fixedWidth: 280,
+          }),
+        this.add
+          .text(-320, -154, `RANK #${appState.ranks.richest ?? '-'}`, {
+            fontFamily: VEGAS_FONT_DISPLAY,
+            fontSize: '15px',
+            color: '#ffd45a',
+          }),
+      ]);
+
+      const balancePlaque = createHudPlaque(
+        this,
+        -250,
+        -48,
+        'BANKROLL',
+        formatCredits(player.balance),
+        CASINO_COLORS.gold,
+        250
+      );
+      this.root.add(balancePlaque);
+
+      const metrics = [
+        ['PLAYS', player.totalRounds.toLocaleString()],
+        ['BIGGEST HIT', formatCredits(player.biggestWin)],
+        ['BEST MULTI', `${player.bestMultiplier.toFixed(2)}x`],
+        ['BEST STREAK', String(player.bestStreak)],
+      ] as const;
+      metrics.forEach(([label, value], index) => {
+        const column = index % 2;
+        const row = Math.floor(index / 2);
+        const x = -338 + column * 174;
+        const y = 26 + row * 80;
+        const tile = this.add.container(x, y);
+        tile.add([
+          this.add
+            .rectangle(0, 0, 158, 64, 0x09070d, 0.98)
+            .setStrokeStyle(1, CASINO_COLORS.gold, 0.26),
+          this.add
+            .text(0, -13, label, {
+              fontFamily: VEGAS_FONT_BODY,
+              fontSize: '9px',
+              fontStyle: 'bold',
+              color: '#b8a9b7',
+              letterSpacing: 1,
+            })
+            .setOrigin(0.5),
+          this.add
+            .text(0, 10, value, {
+              fontFamily: VEGAS_FONT_DISPLAY,
+              fontSize: '20px',
               color: '#ffffff',
-            }
-          )
-        );
-        this.root?.add(
-          this.add.text(
-            210,
-            -136 + index * 70,
-            `Best ${formatCredits(stats.biggestWin)}  |  ${stats.bestMultiplier.toFixed(2)}x`,
-            {
-              fontFamily: 'Arial',
+            })
+            .setOrigin(0.5),
+        ]);
+        this.root?.add(tile);
+      });
+
+      const gamesFrame = createCabinetFrame(
+        this,
+        236,
+        -66,
+        432,
+        352,
+        CASINO_COLORS.pink
+      );
+      this.root.add(gamesFrame);
+      this.root.add(
+        this.add
+          .text(236, -214, 'TABLE HISTORY', {
+            fontFamily: VEGAS_FONT_DISPLAY,
+            fontSize: '24px',
+            color: '#fff6ec',
+            stroke: '#6e142c',
+            strokeThickness: 2,
+          })
+          .setOrigin(0.5)
+      );
+
+      Object.entries(GAME_LABELS).forEach(([gameId, definition], index) => {
+        const stats = player.statsByGame[gameId as keyof typeof player.statsByGame];
+        const column = index % 2;
+        const row = Math.floor(index / 2);
+        const x = 132 + column * 210;
+        const y = -126 + row * 142;
+        const card = this.add.container(x, y);
+        card.add([
+          this.add.rectangle(0, 6, 190, 118, 0x000000, 0.38),
+          this.add
+            .rectangle(0, 0, 190, 112, 0x0c0810, 0.98)
+            .setStrokeStyle(2, definition.accent, 0.55),
+          this.add.rectangle(-91, 0, 4, 88, definition.accent, 0.9),
+          this.add
+            .text(-78, -42, definition.label, {
+              fontFamily: VEGAS_FONT_DISPLAY,
               fontSize: '15px',
-              color: '#d9cfff',
-            }
-          )
-        );
+              color: '#fff8ef',
+              fixedWidth: 156,
+            }),
+          this.add
+            .text(-78, -12, `${stats.plays} PLAYS  •  ${stats.wins} WINS`, {
+              fontFamily: VEGAS_FONT_BODY,
+              fontSize: '10px',
+              fontStyle: 'bold',
+              color: '#d6c9d6',
+              fixedWidth: 156,
+            }),
+          this.add
+            .text(-78, 14, `BEST ${formatCredits(stats.biggestWin)}`, {
+              fontFamily: VEGAS_FONT_DISPLAY,
+              fontSize: '14px',
+              color: '#ffd45a',
+              fixedWidth: 156,
+            }),
+          this.add
+            .text(-78, 36, `${stats.bestMultiplier.toFixed(2)}x MULTIPLIER`, {
+              fontFamily: VEGAS_FONT_BODY,
+              fontSize: '10px',
+              color: '#a99fba',
+              fixedWidth: 156,
+            }),
+        ]);
+        this.root?.add(card);
       });
     }
 
     this.root.add(
-      createButton(this, 0, 246, {
-        width: 210,
-        height: 56,
-        label: 'BACK',
-        fill: 0x17132d,
-        stroke: 0xffd54a,
+      createButton(this, 0, 248, {
+        width: 220,
+        height: 58,
+        label: 'BACK TO CASINO',
+        fill: CASINO_COLORS.wine,
+        stroke: CASINO_COLORS.gold,
+        fontSize: 16,
         onPress: () => this.scene.start('CasinoLobby'),
       })
     );
 
     this.root.add(
       this.add
-        .text(0, 326, appState.disclaimer, {
-          fontFamily: 'Arial',
-          fontSize: '14px',
-          color: '#b9aecf',
+        .text(0, 318, appState.disclaimer, {
+          fontFamily: VEGAS_FONT_BODY,
+          fontSize: '12px',
+          color: '#a99fba',
         })
         .setOrigin(0.5)
     );
@@ -136,8 +244,8 @@ export class ProfileScene extends Scene {
     this.root
       .setPosition(
         this.scale.width / 2,
-        isPortrait ? this.scale.height * 0.43 : this.scale.height / 2
+        isPortrait ? this.scale.height * 0.44 : this.scale.height / 2
       )
-      .setScale(safeScale(this, 900, 760));
+      .setScale(safeScale(this, isPortrait ? 900 : 1024, isPortrait ? 720 : 760));
   }
 }
