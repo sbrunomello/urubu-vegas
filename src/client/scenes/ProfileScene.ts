@@ -35,15 +35,29 @@ export class ProfileScene extends Scene {
     this.root = this.add.container(0, 0);
     const player = appState.player;
 
-    const marquee = createVegasMarquee(this, 0, -310, 'PLAYER CLUB', {
-      width: 620,
-      height: 100,
-      titleSize: 48,
-      subtitle: 'YOUR EXTREMELY UNREGULATED-LOOKING LOYALTY CARD',
-      compact: true,
-      accent: CASINO_COLORS.ruby,
-    });
-    this.root.add(marquee);
+    this.root.add(
+      createVegasMarquee(this, 0, -302, 'PLAYER CLUB', {
+        width: 660,
+        height: 92,
+        titleSize: 44,
+        subtitle: 'THE HOUSE KNOWS YOUR NAME',
+        compact: true,
+        accent: CASINO_COLORS.ruby,
+      })
+    );
+
+    const mainFrame = createCabinetFrame(
+      this,
+      0,
+      -38,
+      884,
+      438,
+      CASINO_COLORS.gold
+    );
+    this.root.add(mainFrame);
+    this.root.add(
+      this.add.rectangle(0, -38, 1, 390, CASINO_COLORS.gold, 0.18)
+    );
 
     if (!player) {
       this.root.add(
@@ -56,48 +70,53 @@ export class ProfileScene extends Scene {
           .setOrigin(0.5)
       );
     } else {
-      const playerFrame = createCabinetFrame(
-        this,
-        -250,
-        -66,
-        400,
-        352,
-        CASINO_COLORS.gold
-      );
-      this.root.add(playerFrame);
-      this.root.add(addMascot(this, -360, -102, 0.78, 'mascot-urubu'));
+      const vipCard = this.add.container(-232, -48);
+      const cardGlow = this.add.rectangle(0, 7, 370, 344, CASINO_COLORS.gold, 0.05);
+      const card = this.add
+        .rectangle(0, 0, 360, 334, 0x160a10, 0.98)
+        .setStrokeStyle(2, CASINO_COLORS.gold, 0.62);
+      const inner = this.add
+        .rectangle(0, 0, 344, 318, 0x000000, 0)
+        .setStrokeStyle(1, 0xffffff, 0.08);
+      const foilA = this.add.rectangle(-84, -28, 280, 36, CASINO_COLORS.pink, 0.025).setRotation(-0.2);
+      const foilB = this.add.rectangle(78, 44, 250, 28, CASINO_COLORS.cyan, 0.02).setRotation(-0.2);
+      vipCard.add([cardGlow, card, inner, foilA, foilB]);
+      this.root.add(vipCard);
+      this.root.add(addMascot(this, -326, -112, 0.72, 'mascot-urubu'));
 
       this.root.add([
         this.add
-          .text(-320, -218, 'MEMBER', {
+          .text(-372, -196, 'HOUSE PLAYER CARD', {
             fontFamily: VEGAS_FONT_BODY,
-            fontSize: '10px',
+            fontSize: '9px',
             fontStyle: 'bold',
             color: '#bfae91',
             letterSpacing: 2,
           }),
         this.add
-          .text(-320, -192, `u/${player.username}`, {
+          .text(-276, -174, `u/${player.username}`, {
             fontFamily: VEGAS_FONT_DISPLAY,
-            fontSize: '30px',
+            fontSize: '28px',
             color: '#fff5d0',
             stroke: '#6e142c',
             strokeThickness: 3,
-            fixedWidth: 280,
+            fixedWidth: 250,
           }),
         this.add
-          .text(-320, -154, `RANK #${appState.ranks.richest ?? '-'}`, {
-            fontFamily: VEGAS_FONT_DISPLAY,
-            fontSize: '15px',
+          .text(-276, -140, `RANK #${appState.ranks.richest ?? '-'}  •  PLAYER CLUB`, {
+            fontFamily: VEGAS_FONT_BODY,
+            fontSize: '10px',
+            fontStyle: 'bold',
             color: '#ffd45a',
+            fixedWidth: 250,
           }),
       ]);
 
       const balancePlaque = createHudPlaque(
         this,
-        -250,
-        -48,
-        'BANKROLL',
+        -232,
+        -72,
+        'VIRTUAL BANKROLL',
         formatCredits(player.balance),
         CASINO_COLORS.gold,
         250
@@ -113,118 +132,117 @@ export class ProfileScene extends Scene {
       metrics.forEach(([label, value], index) => {
         const column = index % 2;
         const row = Math.floor(index / 2);
-        const x = -338 + column * 174;
-        const y = 26 + row * 80;
-        const tile = this.add.container(x, y);
-        tile.add([
+        const x = -318 + column * 172;
+        const y = 22 + row * 66;
+        this.root?.add([
+          this.add.rectangle(x, y, 154, 54, 0x09070d, 0.88).setStrokeStyle(1, CASINO_COLORS.gold, 0.18),
           this.add
-            .rectangle(0, 0, 158, 64, 0x09070d, 0.98)
-            .setStrokeStyle(1, CASINO_COLORS.gold, 0.26),
-          this.add
-            .text(0, -13, label, {
+            .text(x, y - 11, label, {
               fontFamily: VEGAS_FONT_BODY,
-              fontSize: '9px',
+              fontSize: '8px',
               fontStyle: 'bold',
-              color: '#b8a9b7',
+              color: '#a99cab',
               letterSpacing: 1,
             })
             .setOrigin(0.5),
           this.add
-            .text(0, 10, value, {
+            .text(x, y + 9, value, {
               fontFamily: VEGAS_FONT_DISPLAY,
-              fontSize: '20px',
-              color: '#ffffff',
+              fontSize: '18px',
+              color: '#fff8ef',
             })
             .setOrigin(0.5),
         ]);
-        this.root?.add(tile);
       });
 
-      const gamesFrame = createCabinetFrame(
-        this,
-        236,
-        -66,
-        432,
-        352,
-        CASINO_COLORS.pink
-      );
-      this.root.add(gamesFrame);
       this.root.add(
         this.add
-          .text(236, -214, 'TABLE HISTORY', {
+          .text(224, -194, 'TABLE HISTORY', {
             fontFamily: VEGAS_FONT_DISPLAY,
-            fontSize: '24px',
+            fontSize: '23px',
             color: '#fff6ec',
             stroke: '#6e142c',
             strokeThickness: 2,
           })
           .setOrigin(0.5)
       );
+      this.root.add(
+        this.add
+          .text(224, -166, 'YOUR RECENT BAD HABITS, ORGANIZED', {
+            fontFamily: VEGAS_FONT_BODY,
+            fontSize: '9px',
+            fontStyle: 'bold',
+            color: '#aa9fac',
+            letterSpacing: 1,
+          })
+          .setOrigin(0.5)
+      );
 
       Object.entries(GAME_LABELS).forEach(([gameId, definition], index) => {
         const stats = player.statsByGame[gameId as keyof typeof player.statsByGame];
-        const column = index % 2;
-        const row = Math.floor(index / 2);
-        const x = 132 + column * 210;
-        const y = -126 + row * 142;
-        const card = this.add.container(x, y);
-        card.add([
-          this.add.rectangle(0, 6, 190, 118, 0x000000, 0.38),
+        const y = -112 + index * 72;
+        const row = this.add.container(224, y);
+        row.add([
+          this.add.rectangle(0, 2, 358, 58, 0x000000, 0.2),
           this.add
-            .rectangle(0, 0, 190, 112, 0x0c0810, 0.98)
-            .setStrokeStyle(2, definition.accent, 0.55),
-          this.add.rectangle(-91, 0, 4, 88, definition.accent, 0.9),
+            .rectangle(0, 0, 358, 56, 0x0c0810, 0.88)
+            .setStrokeStyle(1, definition.accent, 0.32),
+          this.add.rectangle(-174, 0, 4, 38, definition.accent, 0.9),
           this.add
-            .text(-78, -42, definition.label, {
-              fontFamily: VEGAS_FONT_DISPLAY,
-              fontSize: '15px',
-              color: '#fff8ef',
-              fixedWidth: 156,
-            }),
-          this.add
-            .text(-78, -12, `${stats.plays} PLAYS  •  ${stats.wins} WINS`, {
-              fontFamily: VEGAS_FONT_BODY,
-              fontSize: '10px',
-              fontStyle: 'bold',
-              color: '#d6c9d6',
-              fixedWidth: 156,
-            }),
-          this.add
-            .text(-78, 14, `BEST ${formatCredits(stats.biggestWin)}`, {
+            .text(-156, -11, definition.label, {
               fontFamily: VEGAS_FONT_DISPLAY,
               fontSize: '14px',
-              color: '#ffd45a',
-              fixedWidth: 156,
+              color: '#fff8ef',
+              fixedWidth: 146,
             }),
           this.add
-            .text(-78, 36, `${stats.bestMultiplier.toFixed(2)}x MULTIPLIER`, {
+            .text(-156, 10, `${stats.plays} PLAYS • ${stats.wins} WINS`, {
               fontFamily: VEGAS_FONT_BODY,
-              fontSize: '10px',
-              color: '#a99fba',
-              fixedWidth: 156,
+              fontSize: '9px',
+              fontStyle: 'bold',
+              color: '#cfc4d0',
+              fixedWidth: 150,
             }),
+          this.add
+            .text(156, -10, `BEST ${formatCredits(stats.biggestWin)}`, {
+              fontFamily: VEGAS_FONT_DISPLAY,
+              fontSize: '13px',
+              color: '#ffd45a',
+              fixedWidth: 150,
+              align: 'right',
+            })
+            .setOrigin(1, 0),
+          this.add
+            .text(156, 10, `${stats.bestMultiplier.toFixed(2)}x MULTI`, {
+              fontFamily: VEGAS_FONT_BODY,
+              fontSize: '9px',
+              color: '#9f94a5',
+              fixedWidth: 150,
+              align: 'right',
+            })
+            .setOrigin(1, 0),
         ]);
-        this.root?.add(card);
+        this.root?.add(row);
       });
     }
 
     this.root.add(
-      createButton(this, 0, 248, {
+      createButton(this, 0, 230, {
         width: 220,
-        height: 58,
+        height: 54,
         label: 'BACK TO CASINO',
         fill: CASINO_COLORS.wine,
         stroke: CASINO_COLORS.gold,
-        fontSize: 16,
+        fontSize: 15,
         onPress: () => this.scene.start('CasinoLobby'),
       })
     );
 
     this.root.add(
       this.add
-        .text(0, 318, appState.disclaimer, {
+        .text(0, 304, appState.disclaimer, {
           fontFamily: VEGAS_FONT_BODY,
-          fontSize: '12px',
+          fontSize: '11px',
           color: '#a99fba',
         })
         .setOrigin(0.5)
@@ -244,8 +262,8 @@ export class ProfileScene extends Scene {
     this.root
       .setPosition(
         this.scale.width / 2,
-        isPortrait ? this.scale.height * 0.44 : this.scale.height / 2
+        isPortrait ? this.scale.height * 0.45 : this.scale.height / 2
       )
-      .setScale(safeScale(this, isPortrait ? 900 : 1024, isPortrait ? 720 : 760));
+      .setScale(safeScale(this, isPortrait ? 900 : 1024, isPortrait ? 700 : 760));
   }
 }
