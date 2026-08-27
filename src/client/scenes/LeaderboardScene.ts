@@ -2,16 +2,41 @@ import { GameObjects, Scene } from 'phaser';
 import type { LeaderboardKind } from '../../shared/api';
 import { appState } from '../state/appState';
 import {
+  CASINO_COLORS,
+  VEGAS_FONT_BODY,
+  VEGAS_FONT_DISPLAY,
   createButton,
+  createCabinetFrame,
+  createVegasMarquee,
   drawCasinoBackdrop,
   formatCredits,
   safeScale,
 } from '../ui/phaserUi';
 
-const BOARDS: readonly { kind: LeaderboardKind; title: string }[] = [
-  { kind: 'richest', title: 'RICHEST' },
-  { kind: 'biggestWin', title: 'BIGGEST WIN' },
-  { kind: 'mostPlays', title: 'MOST PLAYS' },
+const BOARDS: readonly {
+  kind: LeaderboardKind;
+  title: string;
+  kicker: string;
+  accent: number;
+}[] = [
+  {
+    kind: 'richest',
+    title: 'BIG BANK',
+    kicker: 'DEEPEST POCKETS',
+    accent: CASINO_COLORS.gold,
+  },
+  {
+    kind: 'biggestWin',
+    title: 'BIGGEST HIT',
+    kicker: 'LUCKIEST DISASTER',
+    accent: CASINO_COLORS.pink,
+  },
+  {
+    kind: 'mostPlays',
+    title: 'HOUSE REGULARS',
+    kicker: 'MOST ROUNDS',
+    accent: CASINO_COLORS.cyan,
+  },
 ];
 
 export class LeaderboardScene extends Scene {
@@ -24,95 +49,125 @@ export class LeaderboardScene extends Scene {
   create(): void {
     drawCasinoBackdrop(this);
     this.root = this.add.container(0, 0);
+
     this.root.add(
-      this.add
-        .text(0, -322, 'LEADERBOARDS', {
-          fontFamily: 'Arial Black',
-          fontSize: '48px',
-          color: '#ffffff',
-          stroke: '#7a1230',
-          strokeThickness: 7,
-        })
-        .setOrigin(0.5)
+      createVegasMarquee(this, 0, -310, 'HIGH ROLLERS', {
+        width: 650,
+        height: 102,
+        titleSize: 48,
+        subtitle: 'THE PEOPLE MOST COMMITTED TO FAKE FINANCIAL CHAOS',
+        compact: true,
+        accent: CASINO_COLORS.ruby,
+      })
     );
 
     BOARDS.forEach((board, boardIndex) => {
-      const x = (boardIndex - 1) * 310;
-      const panel = this.add.container(x, -72);
-      panel.add([
+      const x = (boardIndex - 1) * 314;
+      const frame = createCabinetFrame(this, x, -48, 292, 410, board.accent);
+      this.root?.add(frame);
+
+      const header = this.add.container(x, -210);
+      header.add([
         this.add
-          .rectangle(0, 0, 286, 410, 0x15101f, 0.94)
-          .setStrokeStyle(2, 0xffd54a, 0.42),
+          .rectangle(0, 0, 252, 58, 0x0a060d, 0.98)
+          .setStrokeStyle(1, board.accent, 0.45),
         this.add
-          .text(0, -180, board.title, {
-            fontFamily: 'Arial Black',
-            fontSize: '19px',
-            color: '#ffd54a',
+          .text(0, -10, board.kicker, {
+            fontFamily: VEGAS_FONT_BODY,
+            fontSize: '8px',
+            fontStyle: 'bold',
+            color: '#b8a8b8',
+            letterSpacing: 1,
+          })
+          .setOrigin(0.5),
+        this.add
+          .text(0, 11, board.title, {
+            fontFamily: VEGAS_FONT_DISPLAY,
+            fontSize: '20px',
+            color: '#fff7e8',
+            stroke: '#4d0d1d',
+            strokeThickness: 2,
           })
           .setOrigin(0.5),
       ]);
+      this.root?.add(header);
 
       const rows = appState.leaderboards[board.kind];
       if (rows.length === 0) {
-        panel.add(
+        this.root?.add(
           this.add
-            .text(0, -18, 'No scores yet', {
-              fontFamily: 'Arial',
+            .text(x, -38, 'NO WINNERS YET', {
+              fontFamily: VEGAS_FONT_DISPLAY,
               fontSize: '17px',
-              color: '#aeb4c8',
+              color: '#9f94a5',
             })
             .setOrigin(0.5)
         );
+        return;
       }
 
-      rows.forEach((entry, index) => {
+      rows.slice(0, 8).forEach((entry, index) => {
         const value =
           board.kind === 'mostPlays'
             ? entry.score.toLocaleString()
             : formatCredits(entry.score);
-        panel.add(
-          this.add.text(
-            -124,
-            -132 + index * 30,
-            `${entry.rank}. u/${entry.username}`,
-            {
-              fontFamily: 'Arial Black',
-              fontSize: '13px',
-              color: '#ffffff',
-              fixedWidth: 160,
-            }
-          )
-        );
-        panel.add(
-          this.add.text(42, -132 + index * 30, value, {
-            fontFamily: 'Arial',
-            fontSize: '13px',
-            color: '#d9cfff',
-            fixedWidth: 82,
-            align: 'right',
-          })
-        );
+        const y = -154 + index * 42;
+        const row = this.add.container(x, y);
+        const isTop = index === 0;
+        row.add([
+          this.add
+            .rectangle(0, 0, 250, 34, isTop ? board.accent : 0x09070d, isTop ? 0.12 : 0.9)
+            .setStrokeStyle(1, board.accent, isTop ? 0.5 : 0.18),
+          this.add
+            .circle(-105, 0, 12, isTop ? board.accent : 0x17101c, isTop ? 0.22 : 1)
+            .setStrokeStyle(1, board.accent, 0.38),
+          this.add
+            .text(-105, 0, String(entry.rank), {
+              fontFamily: VEGAS_FONT_DISPLAY,
+              fontSize: '12px',
+              color: isTop ? '#fff0a7' : '#d9cad7',
+            })
+            .setOrigin(0.5),
+          this.add
+            .text(-84, 0, `u/${entry.username}`, {
+              fontFamily: VEGAS_FONT_BODY,
+              fontSize: '11px',
+              fontStyle: 'bold',
+              color: '#fff8f0',
+              fixedWidth: 126,
+            })
+            .setOrigin(0, 0.5),
+          this.add
+            .text(112, 0, value, {
+              fontFamily: VEGAS_FONT_DISPLAY,
+              fontSize: '12px',
+              color: isTop ? '#ffd45a' : '#d9cfe0',
+              fixedWidth: 78,
+              align: 'right',
+            })
+            .setOrigin(1, 0.5),
+        ]);
+        this.root?.add(row);
       });
-
-      this.root?.add(panel);
     });
 
     this.root.add(
-      createButton(this, 0, 260, {
-        width: 210,
-        height: 56,
-        label: 'BACK',
-        fill: 0x17132d,
-        stroke: 0xffd54a,
+      createButton(this, 0, 248, {
+        width: 220,
+        height: 58,
+        label: 'BACK TO CASINO',
+        fill: CASINO_COLORS.wine,
+        stroke: CASINO_COLORS.gold,
+        fontSize: 16,
         onPress: () => this.scene.start('CasinoLobby'),
       })
     );
     this.root.add(
       this.add
-        .text(0, 328, appState.disclaimer, {
-          fontFamily: 'Arial',
-          fontSize: '14px',
-          color: '#b9aecf',
+        .text(0, 318, appState.disclaimer, {
+          fontFamily: VEGAS_FONT_BODY,
+          fontSize: '12px',
+          color: '#a99fba',
         })
         .setOrigin(0.5)
     );
@@ -131,8 +186,8 @@ export class LeaderboardScene extends Scene {
     this.root
       .setPosition(
         this.scale.width / 2,
-        isPortrait ? this.scale.height * 0.43 : this.scale.height / 2
+        isPortrait ? this.scale.height * 0.44 : this.scale.height / 2
       )
-      .setScale(safeScale(this, isPortrait ? 960 : 1024, 760));
+      .setScale(safeScale(this, isPortrait ? 950 : 1024, isPortrait ? 720 : 760));
   }
 }
