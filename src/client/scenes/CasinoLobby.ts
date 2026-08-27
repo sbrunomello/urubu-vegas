@@ -1,7 +1,8 @@
 import { GameObjects, Scene } from 'phaser';
 import { soundEngine } from '../audio/SoundEngine';
+import { claimHouseBailout, createActionId } from '../api/urubuVegasApi';
 import { feedbackEngine } from '../feedback/FeedbackEngine';
-import { appState } from '../state/appState';
+import { applyServerState, appState } from '../state/appState';
 import {
   CASINO_COLORS,
   VEGAS_FONT_BODY,
@@ -16,6 +17,7 @@ import {
   formatCredits,
   makeKey,
   safeScale,
+  setButtonEnabled,
 } from '../ui/phaserUi';
 
 type GameDefinition = {
@@ -69,6 +71,8 @@ const GAME_DEFINITIONS: readonly GameDefinition[] = [
 
 export class CasinoLobby extends Scene {
   private root: GameObjects.Container | null = null;
+  private bailoutButton: GameObjects.Container | null = null;
+  private bailoutBusy = false;
 
   constructor() {
     super('CasinoLobby');
@@ -97,7 +101,7 @@ export class CasinoLobby extends Scene {
       player
         ? `${formatCredits(player.balance)}  •  RANK #${appState.ranks.richest ?? '-'}`
         : 'LOADING',
-      CASINO_COLORS.gold,
+      player?.balance === 0 ? CASINO_COLORS.danger : CASINO_COLORS.gold,
       286
     );
     const house = createHudPlaque(
@@ -121,8 +125,6 @@ export class CasinoLobby extends Scene {
       414,
       CASINO_COLORS.gold
     );
-    this.root.add(floorFrame);
-
     const floorHeader = this.add.container(0, -142);
     floorHeader.add([
       this.add.rectangle(0, 0, 820, 26, 0x12070d, 0.98),
@@ -194,7 +196,23 @@ export class CasinoLobby extends Scene {
       },
     });
 
-    const footer = this.add.container(0, 294);
+    this.root.add([
+      marquee,
+      bank,
+      house,
+      host,
+      floorFrame,
+      floorHeader,
+      navRail,
+      leaderboards,
+      profile,
+      help,
+      mute,
+    ]);
+
+    this.createBailoutOrNotice();
+
+    const footer = this.add.container(0, 326);
     footer.add([
       this.add.rectangle(0, -10, 760, 1, CASINO_COLORS.gold, 0.16),
       this.add
@@ -205,20 +223,7 @@ export class CasinoLobby extends Scene {
         })
         .setOrigin(0.5),
     ]);
-
-    this.root.add([
-      floorHeader,
-      navRail,
-      leaderboards,
-      profile,
-      help,
-      mute,
-      marquee,
-      bank,
-      house,
-      host,
-      footer,
-    ]);
+    this.root.add(footer);
 
     this.layout();
     this.scale.on('resize', this.layout, this);
@@ -226,6 +231,92 @@ export class CasinoLobby extends Scene {
       this.scale.off('resize', this.layout, this)
     );
     makeKey(this, 32, () => this.scene.start('UrubuzinhoGame'));
+  }
+
+  private createBailoutOrNotice(): void {
+    const player = appState.player;
+    const notice = appState.lastNotice;
+
+    if (notice) {
+      appState.lastNotice = null;
+      const plate = this.add.container(0, 252);
+      const glow = this.add.rectangle(0, 0, 650, 54, CASINO_COLORS.gold, 0.08);
+      const panel = this.add
+        .rectangle(0, 0, 638, 46, 0x260813, 0.98)
+        .setStrokeStyle(2, CASINO_COLORS.gold, 0.72);
+      const text = this.add
+        .text(0, 0, notice, {
+          fontFamily: VEGAS_FONT_DISPLAY,
+          fontSize: '12px',
+          color: '#fff1a8',
+          fixedWidth: 600,
+          align: 'center',
+        })
+        .setOrigin(0.5);
+      plate.add([glow, panel, text]);
+      this.root?.add(plate);
+      this.tweens.add({
+        targets: plate,
+        alpha: 0,
+        delay: 4200,
+        duration: 550,
+      });
+      return;
+    }
+
+    if (!player || player.balance !== 0) return;
+
+    const warning = this.add
+      .text(0, 238, 'ABSOLUTELY BROKE. THE CASHIER IS TRYING NOT TO LAUGH.', {
+        fontFamily: VEGAS_FONT_BODY,
+        fontSize: '10px',
+        fontStyle: 'bold',
+        color: '#ff9aaa',
+        letterSpacing: 0.6,
+      })
+      .setOrigin(0.5);
+    this.root?.add(warning);
+
+    this.bailoutButton = createButton(this, 0, 274, {
+      width: 330,
+      height: 52,
+      label: 'BEG THE HOUSE FOR $5,000',
+      fill: CASINO_COLORS.wine,
+      stroke: CASINO_COLORS.gold,
+      fontSize: 15,
+      onPress: () => this.claimBailout(),
+    });
+    this.root?.add(this.bailoutButton);
+
+    this.tweens.add({
+      targets: this.bailoutButton,
+      scaleX: 1.025,
+      scaleY: 1.025,
+      yoyo: true,
+      repeat: -1,
+      duration: 820,
+      ease: 'Sine.InOut',
+    });
+  }
+
+  private claimBailout(): void {
+    if (this.bailoutBusy || appState.player?.balance !== 0) return;
+    this.bailoutBusy = true;
+    setButtonEnabled(this.bailoutButton, false);
+
+    void claimHouseBailout(createActionId())
+      .then((payload) => {
+        applyServerState(payload);
+        appState.lastNotice = payload.message;
+        this.scene.restart();
+      })
+      .catch((error) => {
+        this.bailoutBusy = false;
+        setButtonEnabled(this.bailoutButton, true);
+        appState.lastNotice =
+          error instanceof Error ? error.message : 'THE CASHIER WINDOW JAMMED.';
+        this.scene.restart();
+      });
   }
 
   private createGameCard(
@@ -287,10 +378,9 @@ export class CasinoLobby extends Scene {
       card.setScale(1);
     });
     panel.on('pointerdown', () => {
-      void feedbackEngine.unlock().then(() => {
-        feedbackEngine.uiClick();
-        this.scene.start(definition.scene);
-      });
+      void feedbackEngine.unlock();
+      feedbackEngine.uiClick();
+      this.scene.start(definition.scene);
     });
 
     card.add([
