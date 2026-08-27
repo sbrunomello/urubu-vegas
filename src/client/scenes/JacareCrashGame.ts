@@ -31,6 +31,8 @@ export class JacareCrashGame extends Scene {
   private betText: GameObjects.Text | null = null;
   private multiplierText: GameObjects.Text | null = null;
   private statusText: GameObjects.Text | null = null;
+  private riskRing: GameObjects.Arc | null = null;
+  private riskGlow: GameObjects.Rectangle | null = null;
   private betDownButton: GameObjects.Container | null = null;
   private betUpButton: GameObjects.Container | null = null;
   private startButton: GameObjects.Container | null = null;
@@ -49,89 +51,90 @@ export class JacareCrashGame extends Scene {
     feedbackEngine.sceneOpen('crash');
 
     this.root.add(
-      createVegasMarquee(this, 70, -318, 'JACARE CRASH', {
-        width: 580,
-        height: 92,
-        titleSize: 42,
+      createVegasMarquee(this, 66, -306, 'JACARE CRASH', {
+        width: 660,
+        height: 82,
+        titleSize: 40,
         compact: true,
         accent: CASINO_COLORS.green,
       })
     );
-    this.root.add(addMascot(this, -406, -82, 1.25, 'mascot-jacare'));
-
-    const bankPlaque = createHudPlaque(
-      this,
-      -344,
-      -266,
-      'BANKROLL',
-      formatCredits(appState.player?.balance ?? 0),
-      CASINO_COLORS.gold,
-      220
-    );
-    this.root.add(bankPlaque);
-    this.balanceText = bankPlaque
-      .list
-      .find(
-        (item): item is GameObjects.Text =>
-          item instanceof GameObjects.Text && item.text.startsWith('$')
-      ) ?? null;
+    this.root.add(addMascot(this, -410, -42, 1.27, 'mascot-jacare'));
 
     this.root.add(
-      createCabinetFrame(this, 78, -70, 650, 340, CASINO_COLORS.green)
+      createCabinetFrame(this, 66, 12, 770, 560, CASINO_COLORS.green)
     );
     this.root.add([
       this.add
-        .rectangle(78, -226, 540, 14, CASINO_COLORS.goldSoft, 0.9)
-        .setStrokeStyle(1, CASINO_COLORS.champagne, 0.4),
+        .rectangle(66, -244, 660, 18, CASINO_COLORS.goldSoft, 0.94)
+        .setStrokeStyle(1, CASINO_COLORS.champagne, 0.5),
       this.add
-        .text(78, -226, 'MULTIPLIER TABLE • CASH OUT BEFORE THE BITE', {
+        .text(66, -244, 'LIVE MULTIPLIER • LEAVE BEFORE THE BITE', {
           fontFamily: VEGAS_FONT_DISPLAY,
           fontSize: '10px',
           color: '#281706',
           letterSpacing: 1,
         })
         .setOrigin(0.5),
-      this.add.circle(78, -92, 126, CASINO_COLORS.green, 0.025).setStrokeStyle(2, CASINO_COLORS.green, 0.16),
-      this.add.circle(78, -92, 90, CASINO_COLORS.gold, 0.018).setStrokeStyle(1, CASINO_COLORS.gold, 0.14),
-      this.add.rectangle(78, 30, 438, 1, CASINO_COLORS.green, 0.2),
     ]);
 
+    const statusRail = this.add.container(66, -216);
+    statusRail.add([
+      this.add
+        .rectangle(0, 0, 650, 34, 0x07130d, 0.98)
+        .setStrokeStyle(1, CASINO_COLORS.green, 0.36),
+      this.add.rectangle(-320, 0, 4, 22, CASINO_COLORS.green, 0.92),
+      this.add.rectangle(320, 0, 4, 22, CASINO_COLORS.green, 0.42),
+    ]);
+    this.statusText = this.add
+      .text(0, 0, 'GREED HAS A TIMER.', {
+        fontFamily: VEGAS_FONT_BODY,
+        fontSize: '11px',
+        fontStyle: 'bold',
+        color: '#dff3e4',
+        fixedWidth: 610,
+        align: 'center',
+        letterSpacing: 0.5,
+      })
+      .setOrigin(0.5);
+    statusRail.add(this.statusText);
+    this.root.add(statusRail);
+
+    this.riskGlow = this.add.rectangle(66, -58, 560, 286, CASINO_COLORS.green, 0.025);
+    this.riskRing = this.add
+      .circle(66, -72, 126, 0x000000, 0)
+      .setStrokeStyle(3, CASINO_COLORS.green, 0.22);
+    const innerRing = this.add
+      .circle(66, -72, 92, 0x000000, 0)
+      .setStrokeStyle(1, CASINO_COLORS.gold, 0.14);
+    const horizon = this.add.rectangle(66, 60, 438, 1, CASINO_COLORS.green, 0.22);
+    this.root.add([this.riskGlow, this.riskRing, innerRing, horizon]);
+
     this.multiplierText = this.add
-      .text(78, -100, '1.00x', {
+      .text(66, -80, '1.00x', {
         fontFamily: VEGAS_FONT_DISPLAY,
-        fontSize: '88px',
+        fontSize: '92px',
         color: '#7aff8d',
         stroke: '#041008',
         strokeThickness: 10,
       })
       .setOrigin(0.5);
-    this.statusText = this.add
-      .text(78, 58, 'GREED HAS A TIMER.', {
-        fontFamily: VEGAS_FONT_BODY,
-        fontSize: '14px',
-        fontStyle: 'bold',
-        color: '#e1d7e8',
-        fixedWidth: 520,
-        align: 'center',
-        letterSpacing: 0.5,
-      })
-      .setOrigin(0.5);
     const hint = this.add
-      .text(78, 101, 'CASH OUT BEFORE CHOMP', {
+      .text(66, 92, 'CASH OUT BEFORE CHOMP', {
         fontFamily: VEGAS_FONT_DISPLAY,
         fontSize: '12px',
         color: '#69f59a',
         letterSpacing: 1,
       })
       .setOrigin(0.5);
-    this.root.add([this.multiplierText, this.statusText, hint]);
+    this.root.add([this.multiplierText, hint]);
 
     this.createControls();
     this.root.add(
       this.add
-        .text(0, 342, appState.disclaimer, {
+        .text(0, 330, appState.disclaimer, {
           fontFamily: VEGAS_FONT_BODY,
-          fontSize: '12px',
+          fontSize: '11px',
           color: '#a99fba',
         })
         .setOrigin(0.5)
@@ -154,8 +157,21 @@ export class JacareCrashGame extends Scene {
     if (!this.running || !this.activeRound) return;
     const now = Date.now();
     const multiplier = multiplierAt(this.activeRound.startedAt, now);
+    const riskColor =
+      multiplier >= 8
+        ? CASINO_COLORS.danger
+        : multiplier >= 4
+          ? CASINO_COLORS.gold
+          : multiplier >= 2
+            ? 0xd9ff72
+            : CASINO_COLORS.green;
+
     this.multiplierText?.setText(`${multiplier.toFixed(2)}x`);
-    this.multiplierText?.setColor(multiplier >= 8 ? '#ffcf55' : multiplier >= 4 ? '#d9ff72' : '#7aff8d');
+    this.multiplierText?.setColor(
+      multiplier >= 8 ? '#ff5b6f' : multiplier >= 4 ? '#ffcf55' : multiplier >= 2 ? '#d9ff72' : '#7aff8d'
+    );
+    this.riskRing?.setStrokeStyle(3, riskColor, 0.25 + Math.min(multiplier / 18, 0.5));
+    this.riskGlow?.setFillStyle(riskColor, 0.025 + Math.min(multiplier / 180, 0.07));
 
     const tickStep = Math.floor(multiplier);
     if (tickStep > this.lastTickStep) {
@@ -171,14 +187,28 @@ export class JacareCrashGame extends Scene {
           ease: 'Quad.Out',
         });
       }
+      if (this.cashoutButton) {
+        this.tweens.add({
+          targets: this.cashoutButton,
+          scaleX: 1.025,
+          scaleY: 1.025,
+          yoyo: true,
+          duration: 100,
+          ease: 'Quad.Out',
+        });
+      }
     }
 
     if (now >= this.activeRound.crashAt) {
       this.running = false;
       this.setStatus(`CHOMP! CRASHED AT ${this.activeRound.crashPoint.toFixed(2)}x.`);
       this.multiplierText?.setColor('#ff425d');
+      this.riskRing?.setStrokeStyle(4, CASINO_COLORS.danger, 0.8);
+      this.riskGlow?.setFillStyle(CASINO_COLORS.danger, 0.1);
       this.setButtons(false, true);
       setButtonLabel(this.cashoutButton, 'CLEAR ROUND');
+      this.cameras.main.shake(180, 0.008);
+      this.cameras.main.flash(100, 255, 60, 90, false);
       feedbackEngine.crash(this);
     }
     if (delta > 0 && this.multiplierText) {
@@ -187,74 +217,99 @@ export class JacareCrashGame extends Scene {
   }
 
   private createControls(): void {
-    this.root?.add(
-      createCabinetFrame(this, 28, 246, 846, 92, CASINO_COLORS.gold)
+    const deck = this.add.container(66, 222);
+    deck.add([
+      this.add.rectangle(0, 6, 690, 88, 0x000000, 0.46),
+      this.add
+        .rectangle(0, 0, 690, 82, 0x08120c, 0.98)
+        .setStrokeStyle(2, CASINO_COLORS.goldSoft, 0.62),
+      this.add.rectangle(0, -37, 650, 2, CASINO_COLORS.champagne, 0.35),
+      this.add.rectangle(0, 37, 650, 1, CASINO_COLORS.green, 0.22),
+    ]);
+    this.root?.add(deck);
+
+    const bankPlaque = createHudPlaque(
+      this,
+      -240,
+      222,
+      'BANKROLL',
+      formatCredits(appState.player?.balance ?? 0),
+      CASINO_COLORS.gold,
+      160
     );
-    this.betDownButton = createButton(this, -330, 246, {
-      width: 72,
-      height: 54,
+    this.root?.add(bankPlaque);
+    this.balanceText = bankPlaque.list.find(
+      (item): item is GameObjects.Text =>
+        item instanceof GameObjects.Text && item.text.startsWith('$')
+    ) ?? null;
+
+    this.betDownButton = createButton(this, -128, 222, {
+      width: 54,
+      height: 48,
       label: '−',
       fill: 0x101a14,
       stroke: CASINO_COLORS.gold,
-      fontSize: 24,
+      fontSize: 22,
       onPress: () => this.changeBet(-1),
     });
     this.root?.add(this.betDownButton);
 
     this.root?.add(
-      this.add.rectangle(-210, 246, 152, 58, 0x0b1510, 0.98).setStrokeStyle(1, CASINO_COLORS.gold, 0.4)
+      this.add
+        .rectangle(-65, 222, 92, 48, 0x0b1510, 0.98)
+        .setStrokeStyle(1, CASINO_COLORS.gold, 0.34)
     );
     this.betText = this.add
-      .text(-210, 246, '', {
+      .text(-65, 222, '', {
         fontFamily: VEGAS_FONT_DISPLAY,
-        fontSize: '17px',
+        fontSize: '14px',
         color: '#fff8ef',
-        fixedWidth: 142,
+        fixedWidth: 86,
         align: 'center',
       })
       .setOrigin(0.5);
     this.root?.add(this.betText);
 
-    this.betUpButton = createButton(this, -90, 246, {
-      width: 72,
-      height: 54,
+    this.betUpButton = createButton(this, 0, 222, {
+      width: 54,
+      height: 48,
       label: '+',
       fill: 0x101a14,
       stroke: CASINO_COLORS.gold,
-      fontSize: 24,
+      fontSize: 22,
       onPress: () => this.changeBet(1),
     });
     this.root?.add(this.betUpButton);
 
-    this.startButton = createButton(this, 112, 246, {
-      width: 180,
-      height: 64,
+    this.startButton = createButton(this, 112, 222, {
+      width: 148,
+      height: 56,
       label: 'START',
       fill: 0x0e5f31,
       stroke: CASINO_COLORS.green,
-      fontSize: 23,
+      fontSize: 22,
       onPress: () => this.startRound(),
     });
-    this.cashoutButton = createButton(this, 322, 246, {
-      width: 200,
-      height: 64,
+    this.cashoutButton = createButton(this, 278, 222, {
+      width: 164,
+      height: 56,
       label: 'CASH OUT',
       fill: CASINO_COLORS.wine,
       stroke: CASINO_COLORS.gold,
-      fontSize: 20,
+      fontSize: 19,
       onPress: () => this.cashout(),
     });
     this.root?.add([this.startButton, this.cashoutButton]);
     this.setButtons(true, false);
 
     this.root?.add(
-      createButton(this, 0, 304, {
-        width: 136,
-        height: 44,
+      createButton(this, 400, 222, {
+        width: 92,
+        height: 48,
         label: 'LOBBY',
         fill: 0x151126,
         stroke: CASINO_COLORS.cyan,
-        fontSize: 14,
+        fontSize: 12,
         onPress: () => this.scene.start('CasinoLobby'),
       })
     );
@@ -293,6 +348,8 @@ export class JacareCrashGame extends Scene {
         this.running = true;
         this.multiplierText?.setText('1.00x');
         this.multiplierText?.setColor('#7aff8d');
+        this.riskRing?.setStrokeStyle(3, CASINO_COLORS.green, 0.3);
+        this.riskGlow?.setFillStyle(CASINO_COLORS.green, 0.03);
         this.setStatus('RUN. GREEDY LITTLE HUMAN.');
         setButtonLabel(this.cashoutButton, 'CASH OUT');
         this.setButtons(false, true);
@@ -324,6 +381,7 @@ export class JacareCrashGame extends Scene {
         );
         if (result.reward > 0) {
           feedbackEngine.cashout(this, this.scale.width / 2, this.scale.height / 2, result.reward);
+          this.cameras.main.flash(90, 100, 255, 145, false);
         } else {
           feedbackEngine.win(
             this,
@@ -335,6 +393,8 @@ export class JacareCrashGame extends Scene {
         }
         setButtonLabel(this.cashoutButton, 'CASH OUT');
         this.multiplierText?.setText(result.multiplier > 0 ? `${result.multiplier.toFixed(2)}x` : '1.00x');
+        this.riskRing?.setStrokeStyle(3, CASINO_COLORS.green, 0.24);
+        this.riskGlow?.setFillStyle(CASINO_COLORS.green, 0.025);
         this.setButtons(true, false);
         this.refreshHud();
       })
@@ -362,6 +422,8 @@ export class JacareCrashGame extends Scene {
     if (now >= round.crashAt) {
       this.running = false;
       this.setStatus(`CHOMP! CRASHED AT ${round.crashPoint.toFixed(2)}x.`);
+      this.riskRing?.setStrokeStyle(4, CASINO_COLORS.danger, 0.8);
+      this.riskGlow?.setFillStyle(CASINO_COLORS.danger, 0.1);
       setButtonLabel(this.cashoutButton, 'CLEAR ROUND');
       this.setButtons(false, true);
       return;
@@ -375,7 +437,7 @@ export class JacareCrashGame extends Scene {
 
   private refreshHud(): void {
     this.balanceText?.setText(formatCredits(appState.player?.balance ?? 0));
-    this.betText?.setText(`BET\n${formatCredits(appState.selectedBet)}`);
+    this.betText?.setText(`BET ${formatCredits(appState.selectedBet)}`);
   }
 
   private setStatus(message: string): void {
@@ -396,8 +458,8 @@ export class JacareCrashGame extends Scene {
     this.root
       .setPosition(
         this.scale.width / 2,
-        isPortrait ? this.scale.height * 0.43 : this.scale.height / 2
+        isPortrait ? this.scale.height * 0.45 : this.scale.height / 2
       )
-      .setScale(safeScale(this, isPortrait ? 960 : 1024, 780));
+      .setScale(safeScale(this, isPortrait ? 900 : 1024, isPortrait ? 700 : 760));
   }
 }
