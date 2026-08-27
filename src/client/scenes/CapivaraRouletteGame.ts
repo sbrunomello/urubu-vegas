@@ -8,6 +8,7 @@ import { createActionId, playCapivaraRoulette } from '../api/urubuVegasApi';
 import { feedbackEngine } from '../feedback/FeedbackEngine';
 import { applyServerState, appState } from '../state/appState';
 import {
+  CASINO_COLORS,
   addMascot,
   createButton,
   drawCasinoBackdrop,
@@ -42,10 +43,8 @@ export class CapivaraRouletteGame extends Scene {
   private numberDownButton: GameObjects.Container | null = null;
   private numberUpButton: GameObjects.Container | null = null;
   private numberButton: GameObjects.Container | null = null;
-  private selectionButtons = new Map<
-    SelectionButtonKey,
-    GameObjects.Container
-  >();
+  private spinTickTimer: Phaser.Time.TimerEvent | null = null;
+  private selectionButtons = new Map<SelectionButtonKey, GameObjects.Container>();
   private singleNumber = 7;
   private selected: RouletteSelection = { kind: 'red' };
   private spinning = false;
@@ -57,10 +56,12 @@ export class CapivaraRouletteGame extends Scene {
   create(): void {
     drawCasinoBackdrop(this);
     this.root = this.add.container(0, 0);
-    this.root.add(addMascot(this, -384, -56, 1.34, 'mascot-capivara'));
+    feedbackEngine.sceneOpen('roulette');
+
+    this.root.add(addMascot(this, -410, -64, 1.24, 'mascot-capivara'));
     this.root.add(
       this.add
-        .text(0, -332, 'CAPIVARA ROULETTE', {
+        .text(54, -332, 'CAPIVARA ROULETTE', {
           fontFamily: 'Arial Black',
           fontSize: '44px',
           color: '#ffffff',
@@ -69,104 +70,116 @@ export class CapivaraRouletteGame extends Scene {
         })
         .setOrigin(0.5)
     );
-    this.balanceText = this.add.text(-430, -284, '', {
-      fontFamily: 'Arial Black',
-      fontSize: '19px',
-      color: '#ffd54a',
-    });
-    this.statusText = this.add
-      .text(142, -260, 'Pick a calm little risk.', {
-        fontFamily: 'Arial',
-        fontSize: '18px',
-        color: '#d9cfff',
-        fixedWidth: 470,
+
+    this.root.add(
+      this.add.rectangle(-326, -282, 228, 46, 0x160e14, 0.95).setStrokeStyle(1, CASINO_COLORS.gold, 0.42)
+    );
+    this.balanceText = this.add
+      .text(-326, -282, '', {
+        fontFamily: 'Arial Black',
+        fontSize: '16px',
+        color: '#ffd45a',
+        fixedWidth: 210,
         align: 'center',
       })
       .setOrigin(0.5);
-    this.root.add([
-      this.add.rectangle(144, -54, 424, 330, 0x071017, 0.56),
-      this.add
-        .rectangle(144, -54, 424, 330, 0x151018, 0.28)
-        .setStrokeStyle(2, 0xff3d71, 0.2),
-    ]);
-    this.resultText = this.add
-      .text(160, -58, '--', {
+    this.statusText = this.add
+      .text(118, -282, 'PICK A SIDE. CAPYBARA DOES NOT CARE.', {
         fontFamily: 'Arial Black',
-        fontSize: '34px',
+        fontSize: '13px',
+        color: '#eadff3',
+        fixedWidth: 500,
+        align: 'center',
+      })
+      .setOrigin(0.5);
+
+    this.root.add([
+      this.add.rectangle(150, -74, 472, 354, 0x000000, 0.34),
+      this.add.rectangle(150, -82, 472, 354, 0x0c080e, 0.94).setStrokeStyle(3, CASINO_COLORS.pink, 0.34),
+      this.add.circle(150, -82, 154, CASINO_COLORS.pink, 0.025),
+    ]);
+
+    this.resultText = this.add
+      .text(150, -82, '—', {
+        fontFamily: 'Arial Black',
+        fontSize: '38px',
         color: '#ffffff',
         stroke: '#12040b',
-        strokeThickness: 5,
+        strokeThickness: 6,
       })
       .setOrigin(0.5);
     this.root.add([this.balanceText, this.statusText]);
+
     this.createWheel();
     this.createControls();
     this.root.add(
       this.add
-        .text(0, 344, appState.disclaimer, {
+        .text(0, 342, appState.disclaimer, {
           fontFamily: 'Arial',
-          fontSize: '14px',
-          color: '#b9aecf',
+          fontSize: '13px',
+          color: '#a99fba',
         })
         .setOrigin(0.5)
     );
+
     this.refreshHud();
     this.layout();
     this.scale.on('resize', this.layout, this);
-    this.events.once('shutdown', () =>
-      this.scale.off('resize', this.layout, this)
-    );
+    this.events.once('shutdown', () => {
+      this.scale.off('resize', this.layout, this);
+      this.spinTickTimer?.destroy();
+      this.spinTickTimer = null;
+    });
     makeKey(this, Phaser.Input.Keyboard.KeyCodes.SPACE, () => this.play());
-    makeKey(this, Phaser.Input.Keyboard.KeyCodes.LEFT, () =>
-      this.changeBet(-1)
-    );
-    makeKey(this, Phaser.Input.Keyboard.KeyCodes.RIGHT, () =>
-      this.changeBet(1)
-    );
-    makeKey(this, Phaser.Input.Keyboard.KeyCodes.UP, () =>
-      this.changeSingleNumber(1)
-    );
-    makeKey(this, Phaser.Input.Keyboard.KeyCodes.DOWN, () =>
-      this.changeSingleNumber(-1)
-    );
-    makeKey(this, Phaser.Input.Keyboard.KeyCodes.ESC, () =>
-      this.scene.start('CasinoLobby')
-    );
+    makeKey(this, Phaser.Input.Keyboard.KeyCodes.LEFT, () => this.changeBet(-1));
+    makeKey(this, Phaser.Input.Keyboard.KeyCodes.RIGHT, () => this.changeBet(1));
+    makeKey(this, Phaser.Input.Keyboard.KeyCodes.UP, () => this.changeSingleNumber(1));
+    makeKey(this, Phaser.Input.Keyboard.KeyCodes.DOWN, () => this.changeSingleNumber(-1));
+    makeKey(this, Phaser.Input.Keyboard.KeyCodes.ESC, () => this.scene.start('CasinoLobby'));
   }
 
   private createWheel(): void {
-    this.wheel = this.add.container(160, -58);
+    this.wheel = this.add.container(150, -82);
     const resultText = this.resultText;
     if (!resultText) return;
+
+    const shadow = this.add.circle(0, 8, 142, 0x000000, 0.44);
+    const outerGlow = this.add.circle(0, 0, 145, CASINO_COLORS.gold, 0.035);
     const graphics = this.add.graphics();
     for (let index = 0; index < 37; index += 1) {
       const start = Phaser.Math.DegToRad(index * (360 / 37));
       const end = Phaser.Math.DegToRad((index + 1) * (360 / 37));
       graphics.fillStyle(
-        index === 0 ? 0x1b8f45 : index % 2 === 0 ? 0x151515 : 0xc12b3c,
+        index === 0 ? 0x168447 : index % 2 === 0 ? 0x16141a : 0xb71f3b,
         1
       );
-      graphics.slice(0, 0, 122, start, end, false);
+      graphics.slice(0, 0, 132, start, end, false);
       graphics.lineTo(0, 0);
       graphics.fillPath();
     }
-    graphics.lineStyle(5, 0xffd54a, 0.9).strokeCircle(0, 0, 122);
-    this.wheel.add([
-      graphics,
-      this.add.circle(0, 0, 40, 0x4b2215, 1).setStrokeStyle(4, 0xffd54a, 0.8),
-    ]);
+    graphics.lineStyle(7, CASINO_COLORS.gold, 0.94).strokeCircle(0, 0, 134);
+    graphics.lineStyle(2, 0xffffff, 0.1).strokeCircle(0, 0, 118);
+
+    const inner = this.add
+      .circle(0, 0, 50, 0x35171d, 1)
+      .setStrokeStyle(4, CASINO_COLORS.gold, 0.82);
+    const hub = this.add
+      .circle(0, 0, 39, 0x140a0e, 1)
+      .setStrokeStyle(1, 0xffffff, 0.12);
+    this.wheel.add([shadow, outerGlow, graphics, inner, hub]);
     this.root?.add(this.wheel);
+
     this.root?.add([
       this.add.triangle(
-        160,
-        -202,
-        144,
-        -174,
-        176,
-        -174,
-        160,
-        -202,
-        0xffd54a,
+        150,
+        -241,
+        132,
+        -208,
+        168,
+        -208,
+        150,
+        -241,
+        CASINO_COLORS.gold,
         1
       ),
       resultText,
@@ -175,20 +188,20 @@ export class CapivaraRouletteGame extends Scene {
 
   private createControls(): void {
     SELECTIONS.forEach((selection, index) => {
-      const x = -272 + (index % 3) * 132;
-      const y = 98 + Math.floor(index / 3) * 54;
+      const x = -262 + (index % 3) * 132;
+      const y = 104 + Math.floor(index / 3) * 52;
       const button = createButton(this, x, y, {
         width: 118,
-        height: 42,
+        height: 40,
         label: selection.toUpperCase(),
         fill:
           selection === 'red'
-            ? 0x8f1834
+            ? CASINO_COLORS.wine
             : selection === 'black'
-              ? 0x111111
-              : 0x17132d,
-        stroke: 0x69f7ff,
-        fontSize: 13,
+              ? 0x111016
+              : 0x171126,
+        stroke: CASINO_COLORS.cyan,
+        fontSize: 12,
         onPress: () => {
           if (this.spinning) return;
           this.selected = { kind: selection };
@@ -198,12 +211,13 @@ export class CapivaraRouletteGame extends Scene {
       this.selectionButtons.set(selection, button);
       this.root?.add(button);
     });
-    const zeroButton = createButton(this, 104, 106, {
-      width: 86,
-      height: 42,
+
+    const zeroButton = createButton(this, 116, 112, {
+      width: 78,
+      height: 40,
       label: '0',
       fill: 0x0e5f31,
-      stroke: 0x7aff8d,
+      stroke: CASINO_COLORS.green,
       fontSize: 18,
       onPress: () => {
         if (this.spinning) return;
@@ -213,90 +227,94 @@ export class CapivaraRouletteGame extends Scene {
     });
     this.selectionButtons.set('zero', zeroButton);
     this.root?.add(zeroButton);
-    this.numberDownButton = createButton(this, 212, 106, {
-      width: 64,
-      height: 42,
-      label: '-',
-      fill: 0x17132d,
-      stroke: 0x69f7ff,
+
+    this.numberDownButton = createButton(this, 214, 112, {
+      width: 58,
+      height: 40,
+      label: '−',
+      fill: 0x171126,
+      stroke: CASINO_COLORS.cyan,
       fontSize: 20,
       onPress: () => this.changeSingleNumber(-1),
     });
-    this.numberButton = createButton(this, 304, 106, {
-      width: 110,
-      height: 42,
+    this.numberButton = createButton(this, 300, 112, {
+      width: 100,
+      height: 40,
       label: `N ${this.singleNumber}`,
-      fill: 0x17132d,
-      stroke: 0x69f7ff,
-      fontSize: 13,
+      fill: 0x171126,
+      stroke: CASINO_COLORS.cyan,
+      fontSize: 12,
       onPress: () => {
         if (this.spinning) return;
         this.selected = { kind: 'single', number: this.singleNumber };
         this.updateSelectionVisuals();
       },
     });
-    this.numberUpButton = createButton(this, 396, 106, {
-      width: 64,
-      height: 42,
+    this.numberUpButton = createButton(this, 386, 112, {
+      width: 58,
+      height: 40,
       label: '+',
-      fill: 0x17132d,
-      stroke: 0x69f7ff,
+      fill: 0x171126,
+      stroke: CASINO_COLORS.cyan,
       fontSize: 20,
       onPress: () => this.changeSingleNumber(1),
     });
     this.selectionButtons.set('single', this.numberButton);
-    this.root?.add([
-      this.numberDownButton,
-      this.numberButton,
-      this.numberUpButton,
-    ]);
-    this.betDownButton = createButton(this, -314, 246, {
-      width: 82,
+    this.root?.add([this.numberDownButton, this.numberButton, this.numberUpButton]);
+
+    this.betDownButton = createButton(this, -330, 246, {
+      width: 72,
       height: 54,
-      label: '-',
-      fill: 0x17132d,
-      stroke: 0xffd54a,
+      label: '−',
+      fill: 0x171126,
+      stroke: CASINO_COLORS.gold,
       fontSize: 24,
       onPress: () => this.changeBet(-1),
     });
     this.root?.add(this.betDownButton);
+
+    this.root?.add(
+      this.add.rectangle(-210, 246, 152, 58, 0x160e14, 0.94).setStrokeStyle(1, CASINO_COLORS.gold, 0.3)
+    );
     this.betText = this.add
-      .text(-190, 246, '', {
+      .text(-210, 246, '', {
         fontFamily: 'Arial Black',
-        fontSize: '20px',
+        fontSize: '17px',
         color: '#ffffff',
-        fixedWidth: 170,
+        fixedWidth: 142,
         align: 'center',
       })
       .setOrigin(0.5);
     this.root?.add(this.betText);
-    this.betUpButton = createButton(this, -66, 246, {
-      width: 82,
+
+    this.betUpButton = createButton(this, -90, 246, {
+      width: 72,
       height: 54,
       label: '+',
-      fill: 0x17132d,
-      stroke: 0xffd54a,
+      fill: 0x171126,
+      stroke: CASINO_COLORS.gold,
       fontSize: 24,
       onPress: () => this.changeBet(1),
     });
     this.root?.add(this.betUpButton);
-    this.playButton = createButton(this, 146, 246, {
-      width: 202,
-      height: 64,
-      label: 'SPIN WHEEL',
+
+    this.playButton = createButton(this, 150, 246, {
+      width: 220,
+      height: 66,
+      label: 'SPIN',
       fill: 0x6b2631,
-      stroke: 0xffd54a,
-      fontSize: 20,
+      stroke: CASINO_COLORS.gold,
+      fontSize: 24,
       onPress: () => this.play(),
     });
     this.root?.add(this.playButton);
     this.root?.add(
-      createButton(this, 358, 246, {
-        width: 138,
+      createButton(this, 368, 246, {
+        width: 136,
         height: 54,
         label: 'LOBBY',
-        fill: 0x17132d,
-        stroke: 0x69f7ff,
+        fill: 0x171126,
+        stroke: CASINO_COLORS.cyan,
         onPress: () => this.scene.start('CasinoLobby'),
       })
     );
@@ -308,63 +326,72 @@ export class CapivaraRouletteGame extends Scene {
     const betValues = appState.games['capivara-roulette'].betValues;
     const index = betValues.indexOf(appState.selectedBet);
     const next = Phaser.Math.Clamp(index + direction, 0, betValues.length - 1);
+    if (next === index) return;
     appState.selectedBet = betValues[next] ?? appState.selectedBet;
+    feedbackEngine.betChange();
     this.refreshHud();
   }
 
   private play(): void {
     if (this.spinning) return;
     if (!appState.player || appState.player.balance < appState.selectedBet) {
-      this.setStatus('Not enough virtual credits.');
+      this.setStatus('NOT ENOUGH FAKE CASH.');
       return;
     }
+
     this.spinning = true;
-    this.setStatus('Capivara is waiting for the server spin...');
+    this.setStatus('WHEEL GOES BRRRR...');
     this.setControlsEnabled(false);
-    this.resultText?.setText('...');
-    void playCapivaraRoulette(
-      createActionId(),
-      appState.selectedBet,
-      this.selected
-    )
+    this.resultText?.setText('•');
+    feedbackEngine.rouletteSpin(this);
+    this.spinTickTimer?.destroy();
+    this.spinTickTimer = this.time.addEvent({
+      delay: 58,
+      loop: true,
+      callback: () => feedbackEngine.rouletteTick(),
+    });
+
+    void playCapivaraRoulette(createActionId(), appState.selectedBet, this.selected)
       .then((payload) => {
         applyServerState(payload);
-        const turns = 4 + payload.result.number / 37;
+        const turns = 5 + payload.result.number / 37;
         this.tweens.add({
           targets: this.wheel,
           rotation: Math.PI * 2 * turns,
-          duration: 1200,
+          duration: 1450,
           ease: 'Cubic.Out',
           onComplete: () => {
+            this.spinTickTimer?.destroy();
+            this.spinTickTimer = null;
             this.spinning = false;
             const result = payload.result;
             this.resultText?.setText(String(result.number));
+            this.resultText?.setColor(
+              result.color === 'green'
+                ? '#7aff8d'
+                : result.color === 'red'
+                  ? '#ff6b7e'
+                  : '#ffffff'
+            );
             this.setStatus(
               result.won
-                ? `${result.number} ${result.color}. Paid ${formatCredits(result.reward)}`
-                : `${result.number} ${result.color}. Miss.`
+                ? `${result.number} ${result.color.toUpperCase()} • +${formatCredits(result.reward)}`
+                : `${result.number} ${result.color.toUpperCase()} • CAPYBARA WINS.`
             );
-            feedbackEngine.win(
-              this,
-              this.scale.width / 2,
-              this.scale.height / 2,
-              result.won ? 'win' : 'miss',
-              result.reward
-            );
+            feedbackEngine.rouletteResult(this, result.won);
             this.refreshHud();
             this.setControlsEnabled(true);
           },
         });
       })
       .catch((error) => {
+        this.spinTickTimer?.destroy();
+        this.spinTickTimer = null;
         this.spinning = false;
-        this.resultText?.setText('--');
+        this.resultText?.setText('—');
+        this.resultText?.setColor('#ffffff');
         this.setControlsEnabled(true);
-        this.setStatus(
-          error instanceof Error
-            ? error.message
-            : 'Connection hiccup. Try again.'
-        );
+        this.setStatus(error instanceof Error ? error.message : 'CAPYBARA LEFT THE TABLE. TRY AGAIN.');
       });
   }
 
@@ -373,6 +400,7 @@ export class CapivaraRouletteGame extends Scene {
     this.singleNumber = Phaser.Math.Clamp(this.singleNumber + direction, 1, 36);
     this.selected = { kind: 'single', number: this.singleNumber };
     setButtonLabel(this.numberButton, `N ${this.singleNumber}`);
+    feedbackEngine.betChange();
     this.updateSelectionVisuals();
   }
 
@@ -380,26 +408,25 @@ export class CapivaraRouletteGame extends Scene {
     SELECTIONS.forEach((selection) => {
       setButtonStroke(
         this.selectionButtons.get(selection) ?? null,
-        this.selected.kind === selection ? 0xffd54a : 0x69f7ff
+        this.selected.kind === selection ? CASINO_COLORS.gold : CASINO_COLORS.cyan
       );
     });
     setButtonStroke(
       this.selectionButtons.get('zero') ?? null,
       this.selected.kind === 'single' && this.selected.number === 0
-        ? 0xffd54a
-        : 0x7aff8d
+        ? CASINO_COLORS.gold
+        : CASINO_COLORS.green
     );
     setButtonStroke(
       this.selectionButtons.get('single') ?? null,
-      this.selected.kind === 'single' &&
-        this.selected.number === this.singleNumber
-        ? 0xffd54a
-        : 0x69f7ff
+      this.selected.kind === 'single' && this.selected.number === this.singleNumber
+        ? CASINO_COLORS.gold
+        : CASINO_COLORS.cyan
     );
     const label =
       this.selected.kind === 'single'
-        ? `Selected number ${this.selected.number}`
-        : `Selected ${this.selected.kind}`;
+        ? `NUMBER ${this.selected.number} LOCKED IN.`
+        : `${this.selected.kind.toUpperCase()} LOCKED IN.`;
     this.setStatus(label);
   }
 
@@ -409,15 +436,11 @@ export class CapivaraRouletteGame extends Scene {
     setButtonEnabled(this.playButton, enabled);
     setButtonEnabled(this.numberDownButton, enabled);
     setButtonEnabled(this.numberUpButton, enabled);
-    this.selectionButtons.forEach((button) =>
-      setButtonEnabled(button, enabled)
-    );
+    this.selectionButtons.forEach((button) => setButtonEnabled(button, enabled));
   }
 
   private refreshHud(): void {
-    this.balanceText?.setText(
-      `Balance ${formatCredits(appState.player?.balance ?? 0)}`
-    );
+    this.balanceText?.setText(`BANK  ${formatCredits(appState.player?.balance ?? 0)}`);
     this.betText?.setText(`BET\n${formatCredits(appState.selectedBet)}`);
   }
 
