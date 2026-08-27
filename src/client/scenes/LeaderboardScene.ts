@@ -51,39 +51,43 @@ export class LeaderboardScene extends Scene {
     this.root = this.add.container(0, 0);
 
     this.root.add(
-      createVegasMarquee(this, 0, -310, 'HIGH ROLLERS', {
-        width: 650,
-        height: 102,
-        titleSize: 48,
-        subtitle: 'THE PEOPLE MOST COMMITTED TO FAKE FINANCIAL CHAOS',
+      createVegasMarquee(this, 0, -302, 'HIGH ROLLERS', {
+        width: 670,
+        height: 92,
+        titleSize: 44,
+        subtitle: 'BIG BANKS • BIG HITS • BAD HABITS',
         compact: true,
         accent: CASINO_COLORS.ruby,
       })
     );
 
-    BOARDS.forEach((board, boardIndex) => {
-      const x = (boardIndex - 1) * 314;
-      const frame = createCabinetFrame(this, x, -48, 292, 410, board.accent);
-      this.root?.add(frame);
+    this.root.add(
+      createCabinetFrame(this, 0, -40, 930, 438, CASINO_COLORS.gold)
+    );
+    this.root.add([
+      this.add.rectangle(-155, -40, 1, 390, CASINO_COLORS.gold, 0.12),
+      this.add.rectangle(155, -40, 1, 390, CASINO_COLORS.gold, 0.12),
+    ]);
 
-      const header = this.add.container(x, -210);
+    BOARDS.forEach((board, boardIndex) => {
+      const x = (boardIndex - 1) * 310;
+      const header = this.add.container(x, -194);
       header.add([
+        this.add.rectangle(0, 0, 274, 62, 0x0a060d, 0.9),
+        this.add.rectangle(0, 30, 250, 2, board.accent, 0.56),
         this.add
-          .rectangle(0, 0, 252, 58, 0x0a060d, 0.98)
-          .setStrokeStyle(1, board.accent, 0.45),
-        this.add
-          .text(0, -10, board.kicker, {
+          .text(0, -11, board.kicker, {
             fontFamily: VEGAS_FONT_BODY,
             fontSize: '8px',
             fontStyle: 'bold',
-            color: '#b8a8b8',
+            color: '#a99dab',
             letterSpacing: 1,
           })
           .setOrigin(0.5),
         this.add
-          .text(0, 11, board.title, {
+          .text(0, 12, board.title, {
             fontFamily: VEGAS_FONT_DISPLAY,
-            fontSize: '20px',
+            fontSize: '21px',
             color: '#fff7e8',
             stroke: '#4d0d1d',
             strokeThickness: 2,
@@ -92,81 +96,89 @@ export class LeaderboardScene extends Scene {
       ]);
       this.root?.add(header);
 
-      const rows = appState.leaderboards[board.kind];
-      if (rows.length === 0) {
-        this.root?.add(
-          this.add
-            .text(x, -38, 'NO WINNERS YET', {
-              fontFamily: VEGAS_FONT_DISPLAY,
-              fontSize: '17px',
-              color: '#9f94a5',
-            })
-            .setOrigin(0.5)
-        );
-        return;
-      }
+      const rows = appState.leaderboards[board.kind].slice(0, 5);
+      for (let index = 0; index < 5; index += 1) {
+        const entry = rows[index];
+        const y = -126 + index * 60;
+        const isTop = index === 0 && Boolean(entry);
+        const row = this.add.container(x, y);
 
-      rows.slice(0, 8).forEach((entry, index) => {
+        if (!entry) {
+          row.add([
+            this.add
+              .rectangle(0, 0, 270, 46, 0x08060b, 0.46)
+              .setStrokeStyle(1, board.accent, 0.1),
+            this.add
+              .text(0, 0, 'OPEN SEAT', {
+                fontFamily: VEGAS_FONT_BODY,
+                fontSize: '9px',
+                fontStyle: 'bold',
+                color: '#5f5664',
+                letterSpacing: 1,
+              })
+              .setOrigin(0.5),
+          ]);
+          this.root?.add(row);
+          continue;
+        }
+
         const value =
           board.kind === 'mostPlays'
             ? entry.score.toLocaleString()
             : formatCredits(entry.score);
-        const y = -154 + index * 42;
-        const row = this.add.container(x, y);
-        const isTop = index === 0;
         row.add([
           this.add
-            .rectangle(0, 0, 250, 34, isTop ? board.accent : 0x09070d, isTop ? 0.12 : 0.9)
-            .setStrokeStyle(1, board.accent, isTop ? 0.5 : 0.18),
+            .rectangle(0, 0, 270, 46, isTop ? board.accent : 0x0a070d, isTop ? 0.12 : 0.82)
+            .setStrokeStyle(1, board.accent, isTop ? 0.52 : 0.16),
           this.add
-            .circle(-105, 0, 12, isTop ? board.accent : 0x17101c, isTop ? 0.22 : 1)
+            .circle(-112, 0, 13, isTop ? board.accent : 0x17101c, isTop ? 0.22 : 1)
             .setStrokeStyle(1, board.accent, 0.38),
           this.add
-            .text(-105, 0, String(entry.rank), {
+            .text(-112, 0, String(entry.rank), {
               fontFamily: VEGAS_FONT_DISPLAY,
               fontSize: '12px',
               color: isTop ? '#fff0a7' : '#d9cad7',
             })
             .setOrigin(0.5),
           this.add
-            .text(-84, 0, `u/${entry.username}`, {
+            .text(-90, 0, `u/${entry.username}`, {
               fontFamily: VEGAS_FONT_BODY,
-              fontSize: '11px',
+              fontSize: '10px',
               fontStyle: 'bold',
               color: '#fff8f0',
-              fixedWidth: 126,
+              fixedWidth: 128,
             })
             .setOrigin(0, 0.5),
           this.add
-            .text(112, 0, value, {
+            .text(120, 0, value, {
               fontFamily: VEGAS_FONT_DISPLAY,
               fontSize: '12px',
               color: isTop ? '#ffd45a' : '#d9cfe0',
-              fixedWidth: 78,
+              fixedWidth: 88,
               align: 'right',
             })
             .setOrigin(1, 0.5),
         ]);
         this.root?.add(row);
-      });
+      }
     });
 
     this.root.add(
-      createButton(this, 0, 248, {
+      createButton(this, 0, 230, {
         width: 220,
-        height: 58,
+        height: 54,
         label: 'BACK TO CASINO',
         fill: CASINO_COLORS.wine,
         stroke: CASINO_COLORS.gold,
-        fontSize: 16,
+        fontSize: 15,
         onPress: () => this.scene.start('CasinoLobby'),
       })
     );
     this.root.add(
       this.add
-        .text(0, 318, appState.disclaimer, {
+        .text(0, 304, appState.disclaimer, {
           fontFamily: VEGAS_FONT_BODY,
-          fontSize: '12px',
+          fontSize: '11px',
           color: '#a99fba',
         })
         .setOrigin(0.5)
@@ -186,8 +198,8 @@ export class LeaderboardScene extends Scene {
     this.root
       .setPosition(
         this.scale.width / 2,
-        isPortrait ? this.scale.height * 0.44 : this.scale.height / 2
+        isPortrait ? this.scale.height * 0.45 : this.scale.height / 2
       )
-      .setScale(safeScale(this, isPortrait ? 950 : 1024, isPortrait ? 720 : 760));
+      .setScale(safeScale(this, isPortrait ? 920 : 1024, isPortrait ? 700 : 760));
   }
 }
