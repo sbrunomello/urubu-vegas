@@ -57,7 +57,7 @@ menu.post('/telemetry', async (c) => {
       {
         showToast:
           `Visitors ${summary.uniqueVisitors} • Opens ${summary.totalOpens} • ` +
-          `Bailouts ${summary.totalBailouts}` +
+          `Plays ${summary.totalRounds} • Bailouts ${summary.totalBailouts}` +
           (recent ? ` • Recent: ${recent}` : ''),
       },
       200
