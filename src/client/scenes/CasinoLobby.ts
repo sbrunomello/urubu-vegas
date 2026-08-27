@@ -6,9 +6,9 @@ import {
   CASINO_COLORS,
   VEGAS_FONT_BODY,
   VEGAS_FONT_DISPLAY,
-  addChasingBulbs,
   addMascot,
   createButton,
+  createCabinetFrame,
   createHudPlaque,
   createVegasMarquee,
   drawCasinoBackdrop,
@@ -32,7 +32,7 @@ const GAME_DEFINITIONS: readonly GameDefinition[] = [
   {
     id: 'urubuzinho',
     title: 'URUBUZINHO',
-    subtitle: 'Classic reels. Questionable bird.',
+    subtitle: 'Five reels. One very suspicious bird.',
     tag: 'HOUSE FAVORITE',
     accent: CASINO_COLORS.violet,
     mascot: 'mascot-urubu',
@@ -41,7 +41,7 @@ const GAME_DEFINITIONS: readonly GameDefinition[] = [
   {
     id: 'oncinha-777',
     title: 'ONCINHA 777',
-    subtitle: 'Velvet. Diamonds. Zero restraint.',
+    subtitle: 'Velvet, diamonds and absolutely no restraint.',
     tag: 'GLAM FLOOR',
     accent: 0xff9f36,
     mascot: 'mascot-oncinha',
@@ -50,7 +50,7 @@ const GAME_DEFINITIONS: readonly GameDefinition[] = [
   {
     id: 'jacare-crash',
     title: 'JACARE CRASH',
-    subtitle: 'Ride the number. Dodge the teeth.',
+    subtitle: 'Ride the number. Leave before the teeth arrive.',
     tag: 'LIVE ACTION',
     accent: CASINO_COLORS.green,
     mascot: 'mascot-jacare',
@@ -59,7 +59,7 @@ const GAME_DEFINITIONS: readonly GameDefinition[] = [
   {
     id: 'capivara-roulette',
     title: 'CAPIVARA ROULETTE',
-    subtitle: 'A suspiciously calm roulette table.',
+    subtitle: 'A suspiciously calm wheel with zero sympathy.',
     tag: 'THE SALON',
     accent: CASINO_COLORS.pink,
     mascot: 'mascot-capivara',
@@ -80,28 +80,30 @@ export class CasinoLobby extends Scene {
     this.root = this.add.container(0, 0);
     feedbackEngine.sceneOpen('lobby');
 
-    const marquee = createVegasMarquee(this, 0, -318, 'URUBU VEGAS', {
-      width: 720,
-      height: 122,
-      titleSize: 62,
-      subtitle: 'WELCOME TO THE STRIP\'S WORST FINANCIAL DECISION',
+    const marquee = createVegasMarquee(this, 0, -308, 'URUBU VEGAS', {
+      width: 734,
+      height: 112,
+      titleSize: 60,
+      subtitle: 'FOUR TABLES • ONE BANKROLL • TERRIBLE INSTINCTS',
       accent: CASINO_COLORS.ruby,
     });
 
     const player = appState.player;
     const bank = createHudPlaque(
       this,
-      -255,
-      -218,
+      -265,
+      -205,
       player ? `u/${player.username}` : 'YOUR TABLE',
-      player ? `${formatCredits(player.balance)}  •  RANK #${appState.ranks.richest ?? '-'}` : 'LOADING',
+      player
+        ? `${formatCredits(player.balance)}  •  RANK #${appState.ranks.richest ?? '-'}`
+        : 'LOADING',
       CASINO_COLORS.gold,
       286
     );
     const house = createHudPlaque(
       this,
-      255,
-      -218,
+      265,
+      -205,
       'THE HOUSE',
       `${appState.globalStats.communityPlays.toLocaleString()} PLAYS  •  RECORD ${formatCredits(
         appState.globalStats.largestRecordedWin
@@ -109,16 +111,24 @@ export class CasinoLobby extends Scene {
       CASINO_COLORS.pink,
       286
     );
+    const host = addMascot(this, 0, -196, 0.64, 'mascot-urubu');
 
-    const host = addMascot(this, 0, -210, 0.64, 'mascot-urubu');
-
-    const floorLabel = this.add.container(0, -145);
-    floorLabel.add([
-      this.add.rectangle(0, 0, 350, 28, 0x07040a, 0.9).setStrokeStyle(1, CASINO_COLORS.gold, 0.28),
+    const floorFrame = createCabinetFrame(
+      this,
+      0,
+      48,
+      906,
+      414,
+      CASINO_COLORS.gold
+    );
+    const floorHeader = this.add.container(0, -142);
+    floorHeader.add([
+      this.add.rectangle(0, 0, 820, 26, 0x12070d, 0.98),
+      this.add.rectangle(0, -12, 780, 1, CASINO_COLORS.gold, 0.22),
       this.add
-        .text(0, 0, 'CHOOSE YOUR TABLE', {
+        .text(0, 0, 'CASINO FLOOR  •  4 TABLES OPEN', {
           fontFamily: VEGAS_FONT_BODY,
-          fontSize: '11px',
+          fontSize: '10px',
           fontStyle: 'bold',
           color: '#ffe39a',
           letterSpacing: 2,
@@ -130,58 +140,65 @@ export class CasinoLobby extends Scene {
       const column = index % 2;
       const row = Math.floor(index / 2);
       const x = (column - 0.5) * 430;
-      const y = -70 + row * 130;
+      const y = -72 + row * 128;
       this.root?.add(this.createGameCard(x, y, definition));
     });
 
-    const navY = 225;
-    const leaderboards = createButton(this, -282, navY, {
-      width: 178,
-      height: 50,
+    const navRail = this.add.container(0, 184);
+    navRail.add([
+      this.add.rectangle(0, 0, 820, 62, 0x0a070d, 0.96),
+      this.add.rectangle(0, -29, 790, 2, CASINO_COLORS.gold, 0.32),
+      this.add.rectangle(0, 29, 790, 1, 0xffffff, 0.06),
+    ]);
+
+    const navY = 184;
+    const leaderboards = createButton(this, -285, navY, {
+      width: 174,
+      height: 44,
       label: 'HIGH ROLLERS',
       fill: 0x11101a,
       stroke: CASINO_COLORS.cyan,
-      fontSize: 14,
+      fontSize: 13,
       onPress: () => this.scene.start('LeaderboardScene'),
     });
-    const profile = createButton(this, -94, navY, {
-      width: 178,
-      height: 50,
-      label: 'MY PLAYER CARD',
+    const profile = createButton(this, -95, navY, {
+      width: 174,
+      height: 44,
+      label: 'PLAYER CLUB',
       fill: 0x11101a,
       stroke: CASINO_COLORS.green,
       fontSize: 13,
       onPress: () => this.scene.start('ProfileScene'),
     });
-    const help = createButton(this, 94, navY, {
-      width: 178,
-      height: 50,
+    const help = createButton(this, 95, navY, {
+      width: 174,
+      height: 44,
       label: 'HOUSE RULES',
       fill: 0x11101a,
       stroke: CASINO_COLORS.gold,
-      fontSize: 14,
+      fontSize: 13,
       onPress: () => this.scene.start('HelpScene'),
     });
-    const mute = createButton(this, 282, navY, {
-      width: 178,
-      height: 50,
+    const mute = createButton(this, 285, navY, {
+      width: 174,
+      height: 44,
       label: soundEngine.isMuted() ? 'SOUND OFF' : 'SOUND ON',
       fill: 0x11101a,
       stroke: CASINO_COLORS.violet,
-      fontSize: 14,
+      fontSize: 13,
       onPress: () => {
         soundEngine.toggleMuted();
         this.scene.restart();
       },
     });
 
-    const footer = this.add.container(0, 292);
+    const footer = this.add.container(0, 294);
     footer.add([
-      this.add.rectangle(0, -8, 760, 1, CASINO_COLORS.gold, 0.18),
+      this.add.rectangle(0, -10, 760, 1, CASINO_COLORS.gold, 0.16),
       this.add
-        .text(0, 12, appState.disclaimer, {
+        .text(0, 10, appState.disclaimer, {
           fontFamily: VEGAS_FONT_BODY,
-          fontSize: '12px',
+          fontSize: '11px',
           color: '#aa9daf',
         })
         .setOrigin(0.5),
@@ -192,7 +209,9 @@ export class CasinoLobby extends Scene {
       bank,
       house,
       host,
-      floorLabel,
+      floorFrame,
+      floorHeader,
+      navRail,
       leaderboards,
       profile,
       help,
@@ -218,27 +237,24 @@ export class CasinoLobby extends Scene {
       definition.id === 'jacare-crash' && appState.activeJacareRound !== null;
     const tag = hasActiveRound ? 'ACTIVE ROUND' : definition.tag;
 
-    const aura = this.add.rectangle(0, 5, 424, 120, definition.accent, 0.055);
-    const shadow = this.add.rectangle(0, 9, 412, 112, 0x000000, 0.5);
-    const outer = this.add
-      .rectangle(0, 0, 408, 108, CASINO_COLORS.goldSoft, 0.94)
-      .setStrokeStyle(1, CASINO_COLORS.champagne, 0.46);
+    const aura = this.add.rectangle(0, 4, 410, 112, definition.accent, 0.045);
+    const shadow = this.add.rectangle(0, 6, 400, 104, 0x000000, 0.42);
     const panel = this.add
-      .rectangle(0, 0, 400, 100, 0x0b0810, 0.99)
-      .setStrokeStyle(2, definition.accent, 0.76)
+      .rectangle(0, 0, 396, 100, 0x0c0810, 0.98)
+      .setStrokeStyle(2, definition.accent, 0.68)
       .setInteractive({ useHandCursor: true });
     const inner = this.add
-      .rectangle(0, 0, 388, 88, 0x000000, 0)
-      .setStrokeStyle(1, 0xffffff, 0.06);
-    const accentBar = this.add.rectangle(-196, 0, 5, 78, definition.accent, 0.94);
-    const imageGlow = this.add.circle(148, -3, 50, definition.accent, 0.11);
-    const image = fitImage(this.add.image(148, -4, definition.mascot), 98, 100);
+      .rectangle(0, 0, 384, 88, 0x000000, 0)
+      .setStrokeStyle(1, 0xffffff, 0.055);
+    const accentBar = this.add.rectangle(-192, 0, 5, 76, definition.accent, 0.95);
+    const imageGlow = this.add.circle(148, -2, 48, definition.accent, 0.1);
+    const image = fitImage(this.add.image(148, -3, definition.mascot), 94, 96);
 
     const tagPlate = this.add
-      .rectangle(-129, -31, 118, 20, 0x140a12, 0.98)
-      .setStrokeStyle(1, definition.accent, 0.62);
+      .rectangle(-126, -31, 120, 20, 0x150a13, 0.98)
+      .setStrokeStyle(1, definition.accent, 0.56);
     const tagText = this.add
-      .text(-129, -31, tag, {
+      .text(-126, -31, tag, {
         fontFamily: VEGAS_FONT_BODY,
         fontSize: '8px',
         fontStyle: 'bold',
@@ -248,8 +264,8 @@ export class CasinoLobby extends Scene {
       .setOrigin(0.5);
 
     const playPlate = this.add
-      .rectangle(146, 34, 78, 22, definition.accent, 0.14)
-      .setStrokeStyle(1, definition.accent, 0.44);
+      .rectangle(146, 34, 80, 22, definition.accent, 0.18)
+      .setStrokeStyle(1, definition.accent, 0.6);
     const playText = this.add
       .text(146, 34, hasActiveRound ? 'RESUME  ›' : 'PLAY  ›', {
         fontFamily: VEGAS_FONT_DISPLAY,
@@ -258,15 +274,15 @@ export class CasinoLobby extends Scene {
       })
       .setOrigin(0.5);
 
-    addChasingBulbs(this, card, 396, 96, definition.accent, 74);
-
     panel.on('pointerover', () => {
-      aura.setAlpha(0.14);
+      aura.setAlpha(0.13);
+      imageGlow.setAlpha(0.18);
       card.setScale(1.018);
       feedbackEngine.uiHover();
     });
     panel.on('pointerout', () => {
-      aura.setAlpha(0.055);
+      aura.setAlpha(0.045);
+      imageGlow.setAlpha(0.1);
       card.setScale(1);
     });
     panel.on('pointerdown', () => {
@@ -279,7 +295,6 @@ export class CasinoLobby extends Scene {
     card.add([
       aura,
       shadow,
-      outer,
       panel,
       inner,
       accentBar,
@@ -287,19 +302,19 @@ export class CasinoLobby extends Scene {
       tagText,
       imageGlow,
       image,
-      this.add.text(-181, -11, definition.title, {
+      this.add.text(-179, -10, definition.title, {
         fontFamily: VEGAS_FONT_DISPLAY,
-        fontSize: definition.title.length > 16 ? '18px' : '24px',
+        fontSize: definition.title.length > 16 ? '18px' : '23px',
         color: '#fff8ee',
         fixedWidth: 258,
         stroke: '#360811',
         strokeThickness: 2,
       }),
-      this.add.text(-181, 18, definition.subtitle, {
+      this.add.text(-179, 18, definition.subtitle, {
         fontFamily: VEGAS_FONT_BODY,
-        fontSize: '11px',
+        fontSize: '10px',
         color: '#cfc1d0',
-        fixedWidth: 248,
+        fixedWidth: 252,
       }),
       playPlate,
       playText,
@@ -325,8 +340,8 @@ export class CasinoLobby extends Scene {
     this.root
       .setPosition(
         this.scale.width / 2,
-        isPortrait ? this.scale.height * 0.44 : this.scale.height / 2
+        isPortrait ? this.scale.height * 0.45 : this.scale.height / 2
       )
-      .setScale(safeScale(this, isPortrait ? 930 : 1024, isPortrait ? 720 : 760));
+      .setScale(safeScale(this, isPortrait ? 900 : 1024, isPortrait ? 700 : 760));
   }
 }
