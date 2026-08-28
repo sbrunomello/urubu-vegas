@@ -1,8 +1,11 @@
 <!doctype html>
-<html lang="en">
+<html lang="pt-BR">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1.0, viewport-fit=cover, maximum-scale=1.0, user-scalable=no"
+    />
     <link rel="stylesheet" href="game.css" />
     <title>Urubu Vegas</title>
   </head>
@@ -10,6 +13,28 @@
   <body>
     <div id="app">
       <div id="game-container"></div>
+
+      <div
+        id="orientation-guard"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="orientation-title"
+        aria-describedby="orientation-copy"
+      >
+        <div class="orientation-card">
+          <div class="orientation-chip" aria-hidden="true">↻</div>
+          <p class="orientation-kicker">MODO CASSINO</p>
+          <h1 id="orientation-title">Gire o celular</h1>
+          <p id="orientation-copy">
+            O Urubu Vegas foi desenhado para jogar na horizontal. Assim as mesas,
+            botões e valores ficam grandes o bastante para não precisar de lupa.
+          </p>
+          <div class="orientation-phone" aria-hidden="true">
+            <span></span>
+          </div>
+          <p class="orientation-hint">Vire o aparelho para continuar</p>
+        </div>
+      </div>
     </div>
     <script type="module" src="game.ts"></script>
   </body>
