@@ -29,6 +29,13 @@
         "location": "subreddit",
         "forUserType": "moderator",
         "endpoint": "/internal/menu/post-create"
+      },
+      {
+        "label": "Urubu Vegas telemetry",
+        "description": "Show visitor and recent-player telemetry",
+        "location": "subreddit",
+        "forUserType": "moderator",
+        "endpoint": "/internal/menu/telemetry"
       }
     ]
   },

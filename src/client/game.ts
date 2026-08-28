@@ -19,8 +19,8 @@ const config: Phaser.Types.Core.GameConfig = {
   parent: 'game-container',
   backgroundColor: '#07030d',
   scale: {
-    // Keep a fixed game resolution but automatically scale it to fit within the available
-    // web-view / device while maintaining aspect ratio.
+    // Reddit controls the expanded webview size. RESIZE keeps Phaser's logical
+    // canvas aligned with the actual safe viewport on desktop and mobile.
     mode: Phaser.Scale.RESIZE,
     autoCenter: Phaser.Scale.CENTER_BOTH,
     width: 1024,
@@ -47,18 +47,37 @@ const config: Phaser.Types.Core.GameConfig = {
   },
 };
 
-const startGame = (parent: string) => {
-  return new Game({ ...config, parent });
+const startGame = (parent: string): Game => new Game({ ...config, parent });
+
+let game: Game | null = null;
+let refreshTimer: number | null = null;
+
+const refreshGameViewport = (): void => {
+  if (refreshTimer !== null) window.clearTimeout(refreshTimer);
+  refreshTimer = window.setTimeout(() => {
+    refreshTimer = null;
+    game?.scale.refresh();
+  }, 120);
 };
 
 document.addEventListener('DOMContentLoaded', () => {
-  startGame('game-container');
+  game = startGame('game-container');
+  requestAnimationFrame(() => game?.scale.refresh());
 });
+
+// Reddit mobile webviews can change usable height when browser chrome, safe areas
+// or device orientation change. Refreshing after those transitions prevents the
+// canvas from keeping stale desktop-like dimensions until the next scene change.
+window.addEventListener('orientationchange', refreshGameViewport);
+window.addEventListener('resize', refreshGameViewport);
+window.visualViewport?.addEventListener('resize', refreshGameViewport);
+window.addEventListener('pageshow', refreshGameViewport);
 
 document.addEventListener('visibilitychange', () => {
   if (document.hidden) {
     void soundEngine.suspend();
     return;
   }
+  refreshGameViewport();
   void soundEngine.resume();
 });

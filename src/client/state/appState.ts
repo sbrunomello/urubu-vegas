@@ -19,6 +19,7 @@ export type AppState = {
   disclaimer: string;
   selectedBet: number;
   lastError: string | null;
+  lastNotice: string | null;
   activeJacareRound: JacareCrashRound | null;
 };
 
@@ -35,6 +36,7 @@ export const appState: AppState = {
   disclaimer: 'Virtual credits only. No purchases, prizes or withdrawals.',
   selectedBet: 50,
   lastError: null,
+  lastNotice: null,
   activeJacareRound: null,
 };
 

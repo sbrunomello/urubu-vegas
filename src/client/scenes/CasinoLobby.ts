@@ -1,20 +1,30 @@
 import { GameObjects, Scene } from 'phaser';
 import { soundEngine } from '../audio/SoundEngine';
-import { appState } from '../state/appState';
+import { claimHouseBailout, createActionId } from '../api/urubuVegasApi';
+import { feedbackEngine } from '../feedback/FeedbackEngine';
+import { applyServerState, appState } from '../state/appState';
 import {
+  CASINO_COLORS,
+  VEGAS_FONT_BODY,
+  VEGAS_FONT_DISPLAY,
   addMascot,
   createButton,
+  createCabinetFrame,
+  createHudPlaque,
+  createVegasMarquee,
   drawCasinoBackdrop,
   fitImage,
   formatCredits,
   makeKey,
   safeScale,
+  setButtonEnabled,
 } from '../ui/phaserUi';
 
 type GameDefinition = {
   id: string;
   title: string;
   subtitle: string;
+  tag: string;
   accent: number;
   mascot: string;
   scene: string;
@@ -24,32 +34,36 @@ const GAME_DEFINITIONS: readonly GameDefinition[] = [
   {
     id: 'urubuzinho',
     title: 'URUBUZINHO',
-    subtitle: '5x3 arcade slot with server-side fate',
-    accent: 0x8d7bff,
+    subtitle: 'Five reels. One very suspicious bird.',
+    tag: 'HOUSE FAVORITE',
+    accent: CASINO_COLORS.violet,
     mascot: 'mascot-urubu',
     scene: 'UrubuzinhoGame',
   },
   {
     id: 'oncinha-777',
     title: 'ONCINHA 777',
-    subtitle: 'Glam slot with different lines and odds',
-    accent: 0xffa33f,
+    subtitle: 'Velvet, diamonds and absolutely no restraint.',
+    tag: 'GLAM FLOOR',
+    accent: 0xff9f36,
     mascot: 'mascot-oncinha',
     scene: 'Oncinha777Game',
   },
   {
     id: 'jacare-crash',
     title: 'JACARE CRASH',
-    subtitle: 'Cash out before the server snap',
-    accent: 0x7aff8d,
+    subtitle: 'Ride the number. Leave before the teeth arrive.',
+    tag: 'LIVE ACTION',
+    accent: CASINO_COLORS.green,
     mascot: 'mascot-jacare',
     scene: 'JacareCrashGame',
   },
   {
     id: 'capivara-roulette',
     title: 'CAPIVARA ROULETTE',
-    subtitle: 'Server-side wheel with calm chaos',
-    accent: 0xd05a67,
+    subtitle: 'A suspiciously calm wheel with zero sympathy.',
+    tag: 'THE SALON',
+    accent: CASINO_COLORS.pink,
     mascot: 'mascot-capivara',
     scene: 'CapivaraRouletteGame',
   },
@@ -57,180 +71,245 @@ const GAME_DEFINITIONS: readonly GameDefinition[] = [
 
 export class CasinoLobby extends Scene {
   private root: GameObjects.Container | null = null;
+  private bailoutButton: GameObjects.Container | null = null;
+  private bailoutBusy = false;
 
   constructor() {
     super('CasinoLobby');
   }
 
   create(): void {
-    this.cameras.main.setBackgroundColor(0x07030d);
+    this.cameras.main.setBackgroundColor(CASINO_COLORS.ink);
     drawCasinoBackdrop(this);
     this.root = this.add.container(0, 0);
+    feedbackEngine.sceneOpen('lobby');
 
-    const marquee = this.add
-      .rectangle(0, -320, 620, 118, 0x0b0712, 0.58)
-      .setStrokeStyle(1, 0xf4c95d, 0.18);
-    const eyebrow = this.add
-      .text(0, -354, 'ARCADE CASINO FICTION', {
-        fontFamily: 'Arial Black',
-        fontSize: '12px',
-        color: '#72ff9a',
-      })
-      .setOrigin(0.5);
-    const title = this.add
-      .text(0, -316, 'URUBU VEGAS', {
-        fontFamily: 'Arial Black',
-        fontSize: '62px',
-        color: '#ffffff',
-        stroke: '#6b1435',
-        strokeThickness: 6,
-      })
-      .setOrigin(0.5);
-    const tagline = this.add
-      .text(0, -270, 'Fast tables. Fictional stakes. Server-side results.', {
-        fontFamily: 'Arial',
-        fontSize: '16px',
-        color: '#d9cfff',
-      })
-      .setOrigin(0.5);
+    const marquee = createVegasMarquee(this, 0, -308, 'URUBU VEGAS', {
+      width: 734,
+      height: 112,
+      titleSize: 60,
+      subtitle: 'FOUR TABLES • ONE BANKROLL • TERRIBLE INSTINCTS',
+      accent: CASINO_COLORS.ruby,
+    });
 
     const player = appState.player;
-    const playerLabel = player
-      ? `u/${player.username}  |  ${formatCredits(player.balance)}  |  Rank ${
-          appState.ranks.richest ?? '-'
-        }`
-      : (appState.lastError ?? 'Loading player...');
-    const playerCard = this.add.container(-276, -144);
-    playerCard.add([
-      this.add.rectangle(4, 6, 372, 100, 0x000000, 0.34),
+    const bank = createHudPlaque(
+      this,
+      -265,
+      -205,
+      player ? `u/${player.username}` : 'YOUR TABLE',
+      player
+        ? `${formatCredits(player.balance)}  •  RANK #${appState.ranks.richest ?? '-'}`
+        : 'LOADING',
+      player?.balance === 0 ? CASINO_COLORS.danger : CASINO_COLORS.gold,
+      286
+    );
+    const house = createHudPlaque(
+      this,
+      265,
+      -205,
+      'THE HOUSE',
+      `${appState.globalStats.communityPlays.toLocaleString()} PLAYS  •  RECORD ${formatCredits(
+        appState.globalStats.largestRecordedWin
+      )}`,
+      CASINO_COLORS.pink,
+      286
+    );
+    const host = addMascot(this, 0, -196, 0.64, 'mascot-urubu');
+
+    const floorFrame = createCabinetFrame(
+      this,
+      0,
+      48,
+      906,
+      414,
+      CASINO_COLORS.gold
+    );
+    const floorHeader = this.add.container(0, -142);
+    floorHeader.add([
+      this.add.rectangle(0, 0, 820, 26, 0x12070d, 0.98),
+      this.add.rectangle(0, -12, 780, 1, CASINO_COLORS.gold, 0.22),
       this.add
-        .rectangle(0, 0, 372, 100, 0x111421, 0.94)
-        .setStrokeStyle(2, 0xf4c95d, 0.48),
-      this.add.rectangle(-178, 0, 5, 80, 0xf4c95d, 0.84),
-      this.add.text(-158, -28, 'PLAYER', {
-        fontFamily: 'Arial Black',
-        fontSize: '12px',
-        color: '#72ff9a',
-      }),
-      this.add.text(-160, 8, playerLabel, {
-        fontFamily: 'Arial Black',
-        fontSize: '17px',
-        color: '#ffffff',
-        wordWrap: { width: 320 },
-      }),
+        .text(0, 0, 'CASINO FLOOR  •  4 TABLES OPEN', {
+          fontFamily: VEGAS_FONT_BODY,
+          fontSize: '10px',
+          fontStyle: 'bold',
+          color: '#ffe39a',
+          letterSpacing: 2,
+        })
+        .setOrigin(0.5),
     ]);
 
-    const statsCard = this.add.container(276, -144);
-    statsCard.add([
-      this.add.rectangle(4, 6, 372, 100, 0x000000, 0.34),
-      this.add
-        .rectangle(0, 0, 372, 100, 0x1a0a16, 0.94)
-        .setStrokeStyle(2, 0xff3d71, 0.5),
-      this.add.rectangle(-178, 0, 5, 80, 0xff3d71, 0.84),
-      this.add.text(-158, -28, 'COMMUNITY', {
-        fontFamily: 'Arial Black',
-        fontSize: '12px',
-        color: '#f4c95d',
-      }),
-      this.add.text(
-        -160,
-        8,
-        `${appState.globalStats.communityPlays.toLocaleString()} plays  |  record ${formatCredits(
-          appState.globalStats.largestRecordedWin
-        )}`,
-        {
-          fontFamily: 'Arial Black',
-          fontSize: '17px',
-          color: '#ffffff',
-          wordWrap: { width: 320 },
-        }
-      ),
-    ]);
-
-    const mascot = addMascot(this, 0, -104, 0.76, 'mascot-urubu');
-    this.root.add(mascot);
+    // Add the structural shell first. Phaser containers render in insertion order;
+    // adding the cabinet after the table cards would paint its opaque inner panel
+    // over every game card inside the Reddit webview.
+    this.root.add([marquee, bank, house, host, floorFrame, floorHeader]);
 
     GAME_DEFINITIONS.forEach((definition, index) => {
       const column = index % 2;
       const row = Math.floor(index / 2);
-      const x = (column - 0.5) * 420;
-      const y = 4 + row * 118;
+      const x = (column - 0.5) * 430;
+      const y = -72 + row * 128;
       this.root?.add(this.createGameCard(x, y, definition));
     });
 
-    const navY = 278;
-    const play = createButton(this, -270, navY, {
-      width: 172,
-      height: 54,
-      label: 'PLAY',
-      fill: 0x8f1834,
-      onPress: () => this.scene.start('UrubuzinhoGame'),
-    });
-    const leaderboards = createButton(this, -90, navY, {
-      width: 172,
-      height: 54,
-      label: 'LEADERS',
-      fill: 0x17132d,
-      stroke: 0x69f7ff,
+    const navRail = this.add.container(0, 184);
+    navRail.add([
+      this.add.rectangle(0, 0, 820, 62, 0x0a070d, 0.96),
+      this.add.rectangle(0, -29, 790, 2, CASINO_COLORS.gold, 0.32),
+      this.add.rectangle(0, 29, 790, 1, 0xffffff, 0.06),
+    ]);
+
+    const navY = 184;
+    const leaderboards = createButton(this, -285, navY, {
+      width: 174,
+      height: 44,
+      label: 'HIGH ROLLERS',
+      fill: 0x11101a,
+      stroke: CASINO_COLORS.cyan,
+      fontSize: 13,
       onPress: () => this.scene.start('LeaderboardScene'),
     });
-    const profile = createButton(this, 90, navY, {
-      width: 172,
-      height: 54,
-      label: 'PROFILE',
-      fill: 0x17132d,
-      stroke: 0x7aff8d,
+    const profile = createButton(this, -95, navY, {
+      width: 174,
+      height: 44,
+      label: 'PLAYER CLUB',
+      fill: 0x11101a,
+      stroke: CASINO_COLORS.green,
+      fontSize: 13,
       onPress: () => this.scene.start('ProfileScene'),
     });
-    const help = createButton(this, 270, navY, {
-      width: 172,
-      height: 54,
-      label: 'RULES',
-      fill: 0x17132d,
-      stroke: 0xffd54a,
+    const help = createButton(this, 95, navY, {
+      width: 174,
+      height: 44,
+      label: 'HOUSE RULES',
+      fill: 0x11101a,
+      stroke: CASINO_COLORS.gold,
+      fontSize: 13,
       onPress: () => this.scene.start('HelpScene'),
     });
-
-    const mute = createButton(this, 0, 342, {
-      width: 190,
-      height: 42,
-      label: soundEngine.isMuted() ? 'SOUND: MUTED' : 'SOUND: ON',
-      fill: 0x0f1220,
-      stroke: 0x8d7bff,
-      fontSize: 14,
+    const mute = createButton(this, 285, navY, {
+      width: 174,
+      height: 44,
+      label: soundEngine.isMuted() ? 'SOUND OFF' : 'SOUND ON',
+      fill: 0x11101a,
+      stroke: CASINO_COLORS.violet,
+      fontSize: 13,
       onPress: () => {
         soundEngine.toggleMuted();
         this.scene.restart();
       },
     });
-    const disclaimer = this.add
-      .text(0, 390, appState.disclaimer, {
-        fontFamily: 'Arial',
-        fontSize: '14px',
-        color: '#b9aecf',
-      })
-      .setOrigin(0.5);
 
-    this.root.add([
-      marquee,
-      eyebrow,
-      title,
-      tagline,
-      playerCard,
-      statsCard,
-      play,
-      leaderboards,
-      profile,
-      help,
-      mute,
-      disclaimer,
+    this.root.add([navRail, leaderboards, profile, help, mute]);
+
+    this.createBailoutOrNotice();
+
+    const footer = this.add.container(0, 326);
+    footer.add([
+      this.add.rectangle(0, -10, 760, 1, CASINO_COLORS.gold, 0.16),
+      this.add
+        .text(0, 10, appState.disclaimer, {
+          fontFamily: VEGAS_FONT_BODY,
+          fontSize: '11px',
+          color: '#aa9daf',
+        })
+        .setOrigin(0.5),
     ]);
+    this.root.add(footer);
+
     this.layout();
     this.scale.on('resize', this.layout, this);
     this.events.once('shutdown', () =>
       this.scale.off('resize', this.layout, this)
     );
     makeKey(this, 32, () => this.scene.start('UrubuzinhoGame'));
+  }
+
+  private createBailoutOrNotice(): void {
+    const player = appState.player;
+    const notice = appState.lastNotice;
+
+    if (notice) {
+      appState.lastNotice = null;
+      const plate = this.add.container(0, 252);
+      const glow = this.add.rectangle(0, 0, 650, 54, CASINO_COLORS.gold, 0.08);
+      const panel = this.add
+        .rectangle(0, 0, 638, 46, 0x260813, 0.98)
+        .setStrokeStyle(2, CASINO_COLORS.gold, 0.72);
+      const text = this.add
+        .text(0, 0, notice, {
+          fontFamily: VEGAS_FONT_DISPLAY,
+          fontSize: '12px',
+          color: '#fff1a8',
+          fixedWidth: 600,
+          align: 'center',
+        })
+        .setOrigin(0.5);
+      plate.add([glow, panel, text]);
+      this.root?.add(plate);
+      this.tweens.add({
+        targets: plate,
+        alpha: 0,
+        delay: 4200,
+        duration: 550,
+      });
+      return;
+    }
+
+    if (!player || player.balance !== 0) return;
+
+    const warning = this.add
+      .text(0, 238, 'ABSOLUTELY BROKE. THE CASHIER IS TRYING NOT TO LAUGH.', {
+        fontFamily: VEGAS_FONT_BODY,
+        fontSize: '10px',
+        fontStyle: 'bold',
+        color: '#ff9aaa',
+        letterSpacing: 0.6,
+      })
+      .setOrigin(0.5);
+    this.root?.add(warning);
+
+    this.bailoutButton = createButton(this, 0, 274, {
+      width: 330,
+      height: 52,
+      label: 'BEG THE HOUSE FOR $5,000',
+      fill: CASINO_COLORS.wine,
+      stroke: CASINO_COLORS.gold,
+      fontSize: 15,
+      onPress: () => this.claimBailout(),
+    });
+    this.root?.add(this.bailoutButton);
+
+    this.tweens.add({
+      targets: this.bailoutButton,
+      scaleX: 1.025,
+      scaleY: 1.025,
+      yoyo: true,
+      repeat: -1,
+      duration: 820,
+      ease: 'Sine.InOut',
+    });
+  }
+
+  private claimBailout(): void {
+    if (this.bailoutBusy || appState.player?.balance !== 0) return;
+    this.bailoutBusy = true;
+    setButtonEnabled(this.bailoutButton, false);
+
+    void claimHouseBailout(createActionId())
+      .then((payload) => {
+        applyServerState(payload);
+        appState.lastNotice = payload.message;
+        this.scene.restart();
+      })
+      .catch((error) => {
+        this.bailoutBusy = false;
+        setButtonEnabled(this.bailoutButton, true);
+        appState.lastNotice =
+          error instanceof Error ? error.message : 'THE CASHIER WINDOW JAMMED.';
+        this.scene.restart();
+      });
   }
 
   private createGameCard(
@@ -241,57 +320,100 @@ export class CasinoLobby extends Scene {
     const card = this.add.container(x, y);
     const hasActiveRound =
       definition.id === 'jacare-crash' && appState.activeJacareRound !== null;
-    const shadow = this.add.rectangle(5, 7, 388, 104, 0x000000, 0.36);
+    const tag = hasActiveRound ? 'ACTIVE ROUND' : definition.tag;
+
+    const aura = this.add.rectangle(0, 4, 410, 112, definition.accent, 0.045);
+    const shadow = this.add.rectangle(0, 6, 400, 104, 0x000000, 0.42);
     const panel = this.add
-      .rectangle(0, 0, 388, 104, 0x12131f, 0.96)
-      .setStrokeStyle(2, definition.accent, 0.72)
+      .rectangle(0, 0, 396, 100, 0x0c0810, 0.98)
+      .setStrokeStyle(2, definition.accent, 0.68)
       .setInteractive({ useHandCursor: true });
-    panel.on('pointerdown', () => this.scene.start(definition.scene));
-    const accentBar = this.add.rectangle(
-      -190,
-      0,
-      6,
-      78,
-      definition.accent,
-      0.92
-    );
-    const imageGlow = this.add.circle(142, 0, 46, definition.accent, 0.1);
-    const image = fitImage(this.add.image(142, 0, definition.mascot), 86, 88);
-    const statusChip = this.add
-      .rectangle(-122, -30, 96, 20, 0x0a2415, 0.92)
-      .setStrokeStyle(1, hasActiveRound ? 0xf4c95d : 0x72ff9a, 0.5);
+    const inner = this.add
+      .rectangle(0, 0, 384, 88, 0x000000, 0)
+      .setStrokeStyle(1, 0xffffff, 0.055);
+    const accentBar = this.add.rectangle(-192, 0, 5, 76, definition.accent, 0.95);
+    const imageGlow = this.add.circle(148, -2, 48, definition.accent, 0.1);
+    const image = fitImage(this.add.image(148, -3, definition.mascot), 94, 96);
+
+    const tagPlate = this.add
+      .rectangle(-126, -31, 120, 20, 0x150a13, 0.98)
+      .setStrokeStyle(1, definition.accent, 0.56);
+    const tagText = this.add
+      .text(-126, -31, tag, {
+        fontFamily: VEGAS_FONT_BODY,
+        fontSize: '8px',
+        fontStyle: 'bold',
+        color: hasActiveRound ? '#ffe47d' : '#f4ecf5',
+        letterSpacing: 1,
+      })
+      .setOrigin(0.5);
+
+    const playPlate = this.add
+      .rectangle(146, 34, 80, 22, definition.accent, 0.18)
+      .setStrokeStyle(1, definition.accent, 0.6);
+    const playText = this.add
+      .text(146, 34, hasActiveRound ? 'RESUME  ›' : 'PLAY  ›', {
+        fontFamily: VEGAS_FONT_DISPLAY,
+        fontSize: '12px',
+        color: '#ffe6a0',
+      })
+      .setOrigin(0.5);
+
+    panel.on('pointerover', () => {
+      aura.setAlpha(0.13);
+      imageGlow.setAlpha(0.18);
+      card.setScale(1.018);
+      feedbackEngine.uiHover();
+    });
+    panel.on('pointerout', () => {
+      aura.setAlpha(0.045);
+      imageGlow.setAlpha(0.1);
+      card.setScale(1);
+    });
+    panel.on('pointerdown', () => {
+      void feedbackEngine.unlock();
+      feedbackEngine.uiClick();
+      this.scene.start(definition.scene);
+    });
+
     card.add([
+      aura,
       shadow,
       panel,
+      inner,
       accentBar,
-      statusChip,
+      tagPlate,
+      tagText,
       imageGlow,
       image,
-      this.add.text(-170, -24, hasActiveRound ? 'ACTIVE ROUND' : 'OPEN TABLE', {
-        fontFamily: 'Arial Black',
+      this.add.text(-179, -10, definition.title, {
+        fontFamily: VEGAS_FONT_DISPLAY,
+        fontSize: definition.title.length > 16 ? '18px' : '23px',
+        color: '#fff8ee',
+        fixedWidth: 258,
+        stroke: '#360811',
+        strokeThickness: 2,
+      }),
+      this.add.text(-179, 18, definition.subtitle, {
+        fontFamily: VEGAS_FONT_BODY,
         fontSize: '10px',
-        color: hasActiveRound ? '#ffd54a' : '#7aff8d',
+        color: '#cfc1d0',
+        fixedWidth: 252,
       }),
-      this.add.text(-170, 1, definition.title, {
-        fontFamily: 'Arial Black',
-        fontSize: definition.title.length > 14 ? '20px' : '24px',
-        color: '#ffffff',
-        fixedWidth: 260,
-      }),
-      this.add.text(-170, 31, definition.subtitle, {
-        fontFamily: 'Arial',
-        fontSize: '13px',
-        color: '#d9cfff',
-        fixedWidth: 250,
-      }),
-      this.add
-        .text(150, 34, hasActiveRound ? 'RESUME' : 'PLAY', {
-          fontFamily: 'Arial Black',
-          fontSize: '15px',
-          color: '#ffd54a',
-        })
-        .setOrigin(0.5),
+      playPlate,
+      playText,
     ]);
+
+    this.tweens.add({
+      targets: imageGlow,
+      alpha: 0.05,
+      scaleX: 1.12,
+      scaleY: 1.12,
+      yoyo: true,
+      repeat: -1,
+      duration: 1100 + Math.floor(Math.random() * 600),
+      ease: 'Sine.InOut',
+    });
     return card;
   }
 
@@ -302,8 +424,8 @@ export class CasinoLobby extends Scene {
     this.root
       .setPosition(
         this.scale.width / 2,
-        isPortrait ? this.scale.height * 0.42 : this.scale.height / 2
+        isPortrait ? this.scale.height * 0.45 : this.scale.height / 2
       )
-      .setScale(safeScale(this, isPortrait ? 960 : 1024, 860));
+      .setScale(safeScale(this, isPortrait ? 900 : 1024, isPortrait ? 700 : 760));
   }
 }
